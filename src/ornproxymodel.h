@@ -1,0 +1,18 @@
+#ifndef ORNPROXYMODEL_H
+#define ORNPROXYMODEL_H
+
+#include <QSortFilterProxyModel>
+
+class OrnProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+
+public:
+    explicit OrnProxyModel(QObject *parent = 0);
+
+public:
+    // Why QSortFilterProxyModel has no sort slot?
+    Q_INVOKABLE void sort(Qt::SortOrder order);
+};
+
+#endif // ORNPROXYMODEL_H
