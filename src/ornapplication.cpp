@@ -78,9 +78,13 @@ void OrnApplication::enableRepo()
     else if (mRepoStatus == RepoDisabled)
     {
         auto t = this->transaction();
+        connect(t, &PackageKit::Transaction::finished, [=]()
+        {
+            qDebug() << "Starting transaction" << t->uid() << "method checkRepoUpdate()";
+            this->checkRepoUpdate(mRepoId, QString(), true);
+        });
         qDebug() << "Starting transaction" << t->uid() << "method repoEnable()";
         t->repoEnable(mRepoId, true);
-        this->checkRepoUpdate(mRepoId, QString(), true);
     }
     else
     {
@@ -155,29 +159,31 @@ void OrnApplication::checkAppPackage(const PackageKit::Transaction::Filter &filt
 {
     auto t = this->transaction();
     connect(t, &PackageKit::Transaction::package, this, &OrnApplication::onPackage);
-    qDebug() << "Resolving package" << mPackageName << "status and available versions by starting transaction"
-             << t->uid() << "method resolve()";
+    qDebug() << "Resolving package" << mPackageName
+             << PackageKit::Daemon::enumToString<PackageKit::Transaction>(filter, "Filter")
+             << "packages by starting transaction" << t->uid() << "method resolve()";
     t->resolve(mPackageName, filter);
 }
 
 void OrnApplication::onRepoStatusChanged()
 {
-    if (mRepoStatus == RepoEnabled)
+    if (mRepoStatus != RepoEnabled)
     {
-        auto t = this->transaction();
-        connect(t, &PackageKit::Transaction::finished, [=](PackageKit::Transaction::Exit status, uint runtime)
-        {
-            // Get available package versions after repository refresh
-            Q_UNUSED(runtime)
-            if (status == PackageKit::Transaction::ExitSuccess)
-            {
-                this->checkAppPackage(PackageKit::Transaction::FilterNotInstalled);
-            }
-        });
-        qDebug() << "Refreshing" << mRepoId << "by starting transaction"
-                 << t->uid() << "method repoSetData()";
-        t->repoSetData(mRepoId, QStringLiteral("refresh-now"), QStringLiteral("false"));
+        return;
     }
+    auto t = this->transaction();
+    connect(t, &PackageKit::Transaction::finished, [=](PackageKit::Transaction::Exit status, uint runtime)
+    {
+        // Get available package versions after repository refresh
+        Q_UNUSED(runtime)
+        if (status == PackageKit::Transaction::ExitSuccess)
+        {
+            this->checkAppPackage(PackageKit::Transaction::FilterNotInstalled);
+        }
+    });
+    qDebug() << "Refreshing" << mRepoId << "by starting transaction"
+             << t->uid() << "method repoSetData()";
+    t->repoSetData(mRepoId, QStringLiteral("refresh-now"), QStringLiteral("false"));
 }
 
 void OrnApplication::onTransactionFinished(PackageKit::Transaction::Exit status, uint runtime)
@@ -190,25 +196,27 @@ void OrnApplication::onTransactionFinished(PackageKit::Transaction::Exit status,
 void OrnApplication::checkRepoUpdate(const QString &repoId, const QString &description, bool enabled)
 {
     Q_UNUSED(description)
-    if (mRepoId == repoId)
+    if (mRepoId != repoId)
     {
-        // NOTE: will this work for removed repos?
-        auto status = Orn::isRepoInstalled(repoId) ? RepoDisabled : RepoNotInstalled;
-        if (enabled)
-        {
-            status = RepoEnabled;
-        }
-        if (mRepoStatus != status)
-        {
-            mRepoStatus = status;
-            qDebug() << "Application" << mPackageName << "repository status:" << status;
-            emit this->repoStatusChanged();
-        }
+        return;
+    }
+    // NOTE: will this work for removed repos?
+    auto status = Orn::isRepoInstalled(repoId) ? RepoDisabled : RepoNotInstalled;
+    if (enabled)
+    {
+        status = RepoEnabled;
+    }
+    if (mRepoStatus != status)
+    {
+        mRepoStatus = status;
+        qDebug() << "Application" << mPackageName << "repository status:" << status;
+        emit this->repoStatusChanged();
     }
 }
 
 void OrnApplication::onPackage(PackageKit::Transaction::Info info, const QString &packageID, const QString &summary)
 {
+    Q_UNUSED(summary)
     auto idParts = packageID.split(QChar(';'));
     if (idParts[0] != mPackageName)
     {
