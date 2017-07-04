@@ -26,7 +26,8 @@ SOURCES += \
     src/ornproxymodel.cpp \
     src/ornapplication.cpp \
     src/ornapplistitem.cpp \
-    src/orncommentlistitem.cpp
+    src/orncommentlistitem.cpp \
+    src/ornsearchappsmodel.cpp
 
 HEADERS += \
     src/orn_plugin.h \
@@ -42,7 +43,8 @@ HEADERS += \
     src/ornproxymodel.h \
     src/ornapplication.h \
     src/ornapplistitem.h \
-    src/orncommentlistitem.h
+    src/orncommentlistitem.h \
+    src/ornsearchappsmodel.h
 
 DISTFILES = qmldir
 

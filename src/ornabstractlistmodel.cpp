@@ -24,20 +24,27 @@ void OrnAbstractListModel::reset()
 {
     qDebug() << "Resetting model";
     this->beginResetModel();
-    qDeleteAll(mData);
+    auto d = mData;
     mData.clear();
     mCanFetchMore = true;
     mPage = 0;
     mApiRequest->reset();
+    mPrevReplyHash.clear();
     this->endResetModel();
+    // Delete data only after reset finished
+    qDeleteAll(d);
 }
 
-void OrnAbstractListModel::apiCall(const QString &resource)
+void OrnAbstractListModel::apiCall(const QString &resource, QUrlQuery query)
 {
     auto url = OrnApiRequest::apiUrl(resource);
     if (mFetchable)
     {
-        url.setQuery(QStringLiteral("page=").append(QString::number(mPage)));
+        query.addQueryItem(QStringLiteral("page"), QString::number(mPage));
+    }
+    if (!query.isEmpty())
+    {
+        url.setQuery(query);
     }
     auto request = OrnApiRequest::networkRequest();
     request.setUrl(url);

@@ -31,6 +31,12 @@ QVariant OrnAbstractAppsModel::data(const QModelIndex &index, int role) const
 
 bool OrnAbstractAppsModel::canFetchMore(const QModelIndex &parent) const
 {
+#ifndef NDEBUG
+    if (!mApiRequest->networkManager())
+    {
+        qWarning() << "Network manager is not set";
+    }
+#endif
     return (!parent.isValid() && mApiRequest->networkManager()) ? mCanFetchMore : false;
 }
 

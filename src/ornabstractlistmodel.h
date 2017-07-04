@@ -5,6 +5,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QUrlQuery>
+#include <QCryptographicHash>
 #include <QDebug>
 
 class OrnApiRequest;
@@ -23,13 +25,31 @@ public slots:
     void reset();
 
 protected:
-    void apiCall(const QString &resource);
+    void apiCall(const QString &resource, QUrlQuery query = QUrlQuery());
     template<typename T>
     void processReply(const QJsonDocument &jsonDoc)
     {
         auto jsonArray = jsonDoc.array();
         if (jsonArray.size() > 0)
         {
+            if (!mFetchable)
+            {
+                mCanFetchMore = false;
+            }
+            else
+            {
+                // An ugly patch for some models with repeating data (search model)
+                auto replyHash = QCryptographicHash::hash(
+                            jsonDoc.toJson(), QCryptographicHash::Md5);
+                if (mPrevReplyHash == replyHash)
+                {
+                    qDebug() << "Current reply is similar to the previous one. "
+                                "Considering the model has fetched all data";
+                    mCanFetchMore = false;
+                    return;
+                }
+                mPrevReplyHash = replyHash;
+            }
             QObjectList list;
             for (const QJsonValueRef &jsonValue: jsonArray)
             {
@@ -40,13 +60,9 @@ protected:
             auto row = mData.size();
             this->beginInsertRows(QModelIndex(), row, row + list.size() - 1);
             mData.append(list);
-            this->endInsertRows();
             ++mPage;
             qDebug() << list.size() << "items have been added to the model";
-            if (!mFetchable)
-            {
-                mCanFetchMore = false;
-            }
+            this->endInsertRows();
         }
         else
         {
@@ -64,6 +80,9 @@ protected:
     quint32 mPage;
     QObjectList mData;
     OrnApiRequest *mApiRequest;
+
+private:
+    QByteArray mPrevReplyHash;
 
     // QAbstractItemModel interface
 public:

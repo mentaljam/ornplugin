@@ -25,6 +25,7 @@ void OrnCommentsModel::setAppId(const quint32 &appId)
 
 QVariant OrnCommentsModel::data(const QModelIndex &index, int role) const
 {
+    Q_UNUSED(role)
     if (!index.isValid())
     {
         return QVariant();
@@ -43,6 +44,12 @@ void OrnCommentsModel::fetchMore(const QModelIndex &parent)
 
 bool OrnCommentsModel::canFetchMore(const QModelIndex &parent) const
 {
+#ifndef NDEBUG
+    if (!mApiRequest->networkManager())
+    {
+        qWarning() << "Network manager is not set";
+    }
+#endif
     return (!parent.isValid() && mApiRequest->networkManager()) ? mCanFetchMore : false;
 }
 
