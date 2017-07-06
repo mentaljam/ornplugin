@@ -12,6 +12,7 @@ const QByteArray OrnApiRequest::platformValue(QByteArrayLiteral("SailfishOS"));
 
 OrnApiRequest::OrnApiRequest(QObject *parent) :
     QObject(parent),
+    mNetworkError(false),
     mNetworkManager(0),
     mNetworkReply(0)
 {
@@ -24,6 +25,11 @@ OrnApiRequest::~OrnApiRequest()
     {
         mNetworkReply->deleteLater();
     }
+}
+
+bool OrnApiRequest::networkError() const
+{
+    return mNetworkError;
 }
 
 QNetworkAccessManager *OrnApiRequest::networkManager() const
@@ -81,9 +87,11 @@ void OrnApiRequest::onReplyFinished()
     {
         qDebug() << "Network request error" << mNetworkReply->error()
                  << "-" << mNetworkReply->errorString();
+        this->setNetworkError(true);
         this->reset();
         return;
     }
+    this->setNetworkError(false);
 
     QJsonParseError error;
     auto jsonDoc = QJsonDocument::fromJson(mNetworkReply->readAll(), &error);
@@ -97,4 +105,13 @@ void OrnApiRequest::onReplyFinished()
     emit this->jsonReady(jsonDoc);
 
     this->reset();
+}
+
+void OrnApiRequest::setNetworkError(bool error)
+{
+    if (mNetworkError != error)
+    {
+        mNetworkError = error;
+        emit this->networkErrorChanged();
+    }
 }
