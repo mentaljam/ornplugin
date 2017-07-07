@@ -3,6 +3,8 @@
 
 #include <QObject>
 
+class QTimer;
+
 class OrnCommentListItem : public QObject
 {
     Q_OBJECT
@@ -16,11 +18,15 @@ public:
     OrnCommentListItem(const QJsonObject &jsonObject, QObject *parent = 0);
 
 private:
+    static QString sinceCreated(const quint64 &created);
+
+private:
     quint32 mCreated;
     QString mUserName;
     QString mUserIconSource;
     QString mText;
     QString mDate;
+    QTimer  *mCreatedTimer;
 };
 
 #endif // ORNCOMMENTLISTITEM_H
