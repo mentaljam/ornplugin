@@ -12,6 +12,8 @@ OrnCommentListItem::OrnCommentListItem(QObject *parent) :
 
 OrnCommentListItem::OrnCommentListItem(const QJsonObject &jsonObject, QObject *parent) :
     QObject(parent),
+    mCid(Orn::toUint(jsonObject[QStringLiteral("cid")])),
+    mPid(Orn::toUint(jsonObject[QStringLiteral("pid")])),
     mCreated(Orn::toUint(jsonObject[QStringLiteral("created")])),
     mText(Orn::toString(jsonObject[QStringLiteral("text")])),
     mDate(OrnCommentListItem::sinceCreated(mCreated)),
