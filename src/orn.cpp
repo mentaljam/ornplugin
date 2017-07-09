@@ -10,7 +10,7 @@
 #include <QDebug>
 
 const QString Orn::repoNamePrefix(QStringLiteral("openrepos-"));
-const QString Orn::repoUrlTemplate(QStringLiteral("http://sailfish.openrepos.net/%0/personal/main"));
+const QString Orn::repoUrlTemplate(QStringLiteral("https://sailfish.openrepos.net/%0/personal/main"));
 const QString Orn::repoFileTemplate(QStringLiteral("/etc/zypp/repos.d/ssu_%0_release.repo"));
 
 const QString Orn::ssuInterface(QStringLiteral("org.nemo.ssu"));
