@@ -24,6 +24,9 @@ public:
 public slots:
     void reset();
 
+signals:
+    void replyProcessed();
+
 protected:
     void apiCall(const QString &resource, QUrlQuery query = QUrlQuery());
     template<typename T>
@@ -43,7 +46,7 @@ protected:
                             jsonDoc.toJson(), QCryptographicHash::Md5);
                 if (mPrevReplyHash == replyHash)
                 {
-                    qDebug() << "Current reply is similar to the previous one. "
+                    qDebug() << "Current reply is equal to the previous one. "
                                 "Considering the model has fetched all data";
                     mCanFetchMore = false;
                     return;
@@ -69,6 +72,7 @@ protected:
             qDebug() << "Reply is empty, the model has fetched all data";
             mCanFetchMore = false;
         }
+        emit this->replyProcessed();
     }
 
 protected slots:
@@ -88,7 +92,7 @@ private:
 public:
     int rowCount(const QModelIndex &parent) const;
     virtual void fetchMore(const QModelIndex &parent) = 0;
-    virtual bool canFetchMore(const QModelIndex &parent) const = 0;
+    bool canFetchMore(const QModelIndex &parent) const;
 };
 
 #endif // ORNABSTRACTLISTMODEL_H

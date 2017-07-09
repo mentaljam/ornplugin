@@ -30,7 +30,6 @@ private:
 public:
     QVariant data(const QModelIndex &index, int role) const;
     void fetchMore(const QModelIndex &parent);
-    bool canFetchMore(const QModelIndex &parent) const;
     QHash<int, QByteArray> roleNames() const;
 
     // OrnAbstractListModel interface

@@ -22,7 +22,6 @@ public:
     // QAbstractItemModel interface
 public:
     QVariant data(const QModelIndex &index, int role) const;
-    bool canFetchMore(const QModelIndex &parent) const;
     QHash<int, QByteArray> roleNames() const;
 
     // OrnAbstractListModel interface

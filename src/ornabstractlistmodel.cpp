@@ -55,3 +55,14 @@ int OrnAbstractListModel::rowCount(const QModelIndex &parent) const
 {
     return !parent.isValid() ? mData.size() : 0;
 }
+
+bool OrnAbstractListModel::canFetchMore(const QModelIndex &parent) const
+{
+#ifndef NDEBUG
+    if (!mApiRequest->networkManager())
+    {
+        qWarning() << "Network manager is not set";
+    }
+#endif
+    return (!parent.isValid() && mApiRequest->networkManager()) ? mCanFetchMore : false;
+}

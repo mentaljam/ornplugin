@@ -68,17 +68,6 @@ void OrnCommentsModel::fetchMore(const QModelIndex &parent)
     OrnAbstractListModel::apiCall(QStringLiteral("apps/%0/comments").arg(mAppId));
 }
 
-bool OrnCommentsModel::canFetchMore(const QModelIndex &parent) const
-{
-#ifndef NDEBUG
-    if (!mApiRequest->networkManager())
-    {
-        qWarning() << "Network manager is not set";
-    }
-#endif
-    return (!parent.isValid() && mApiRequest->networkManager()) ? mCanFetchMore : false;
-}
-
 QHash<int, QByteArray> OrnCommentsModel::roleNames() const
 {
     return { { Qt::DisplayRole, "commentData" } };

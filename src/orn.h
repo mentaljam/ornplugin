@@ -21,8 +21,6 @@ public:
     static const QString repoUrlTemplate;
     static const QString repoFileTemplate;
 
-    static const QMap<quint32, const char*> categories;
-
     static const QString ssuInterface;
     static const QString ssuPath;
     static const QString ssuModifyRepoMethod;
@@ -39,8 +37,6 @@ public:
     static QDateTime toDateTime(const QJsonValue &value);
 
     static QList<quint32> toIntList(const QJsonValue &value);
-
-    static QString categoryName(const quint32 &tid);
 
     static bool isRepoInstalled(QString userId);
     static bool addRepo(const QString &userName);

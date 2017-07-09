@@ -27,7 +27,10 @@ SOURCES += \
     src/ornapplication.cpp \
     src/ornapplistitem.cpp \
     src/orncommentlistitem.cpp \
-    src/ornsearchappsmodel.cpp
+    src/ornsearchappsmodel.cpp \
+    src/orncategoriesmodel.cpp \
+    src/orncategorylistitem.cpp \
+    src/orncategoryappsmodel.cpp
 
 HEADERS += \
     src/orn_plugin.h \
@@ -44,9 +47,10 @@ HEADERS += \
     src/ornapplication.h \
     src/ornapplistitem.h \
     src/orncommentlistitem.h \
-    src/ornsearchappsmodel.h
-
-DISTFILES = qmldir
+    src/ornsearchappsmodel.h \
+    src/orncategoriesmodel.h \
+    src/orncategorylistitem.h \
+    src/orncategoryappsmodel.h
 
 OTHER_FILES += \
     scripts/update_categories.py

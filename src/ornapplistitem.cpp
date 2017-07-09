@@ -1,5 +1,6 @@
 #include "ornapplistitem.h"
 #include "orn.h"
+#include "orncategorylistitem.h"
 
 #include <QJsonObject>
 #include <QJsonArray>
@@ -28,7 +29,7 @@ OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject, QObject *parent) :
 
     auto categories = jsonObject[QStringLiteral("category")].toArray();
     auto tid = Orn::toUint(categories.last().toObject()[QStringLiteral("tid")]);
-    mCategory = Orn::categoryName(tid);
+    mCategory = OrnCategoryListItem::categoryName(tid);
 //    auto categories = jsonObject[QStringLiteral("category")].toArray();
 //    QString tidKey(QStringLiteral("tid"));
 //    QStringList list;
