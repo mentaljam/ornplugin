@@ -1,7 +1,7 @@
 #ifndef ORNVERSION_H
 #define ORNVERSION_H
 
-#include <QStringList>
+#include <QVariantList>
 
 class OrnVersion
 {
@@ -21,7 +21,7 @@ public:
     }
 
 private:
-    QStringList mParts;
+    QVariantList mParts;
 };
 
 #endif // ORNVERSION_H

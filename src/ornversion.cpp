@@ -2,10 +2,15 @@
 
 #include <QRegularExpression>
 
-OrnVersion::OrnVersion(const QString &string) :
-    mParts(string.split(QRegularExpression(QStringLiteral("[.+~-]"))))
+OrnVersion::OrnVersion(const QString &string)
 {
-
+    auto slist = string.split(QRegularExpression(QStringLiteral("[.+~-]")));
+    bool ok;
+    for (const QString &s : slist)
+    {
+        auto v = s.toInt(&ok);
+        mParts << (ok ? QVariant(v) : QVariant(s));
+    }
 }
 
 bool OrnVersion::operator <(const OrnVersion &right)
@@ -18,10 +23,11 @@ bool OrnVersion::operator <(const OrnVersion &right)
     // Compare the same parts
     for (int i = 0; i < shorterLength; ++i)
     {
-        auto comp = mParts[i].compare(right.mParts[i]);
-        if (comp != 0)
+        const auto &lp = mParts[i];
+        const auto &rp = right.mParts[i];
+        if (lp != rp)
         {
-            return comp < 0;
+            return lp < rp;
         }
     }
 
