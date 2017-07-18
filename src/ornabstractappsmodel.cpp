@@ -23,7 +23,7 @@ QVariant OrnAbstractAppsModel::data(const QModelIndex &index, int role) const
     case TitleRole:
         return app->mTitle.toLower();
     case DateRole:
-        return app->mUpdated;
+        return app->mCreated;
     default:
         return QVariant();
     }

@@ -9,6 +9,7 @@ class OrnAppListItem : public QObject
 
     Q_OBJECT
     Q_PROPERTY(quint32 appId MEMBER mAppId CONSTANT)
+    Q_PROPERTY(quint32 created MEMBER mCreated CONSTANT)
     Q_PROPERTY(quint32 updated MEMBER mUpdated CONSTANT)
     Q_PROPERTY(quint32 ratingCount MEMBER mRatingCount CONSTANT)
     Q_PROPERTY(float   rating MEMBER mRating CONSTANT)
@@ -27,6 +28,7 @@ private:
 
 private:
     quint32 mAppId;
+    quint32 mCreated;
     quint32 mUpdated;
     quint32 mRatingCount;
     float mRating;

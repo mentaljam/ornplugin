@@ -16,11 +16,12 @@ OrnAppListItem::OrnAppListItem(QObject *parent) :
 OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject, QObject *parent) :
     QObject(parent),
     mAppId(jsonObject[QStringLiteral("appid")].toVariant().toUInt()),
+    mCreated(Orn::toUint(jsonObject[QStringLiteral("created")])),
     mUpdated(Orn::toUint(jsonObject[QStringLiteral("updated")])),
     mTitle(Orn::toString(jsonObject[QStringLiteral("title")])),
     mUserName(Orn::toString(jsonObject[QStringLiteral("user")].toObject()[QStringLiteral("name")])),
     mIconSource(Orn::toString(jsonObject[QStringLiteral("icon")].toObject()[QStringLiteral("url")])),
-    mSinceUpdate(sinceLabel(mUpdated))
+    mSinceUpdate(sinceLabel(mCreated))
 {
     QString ratingKey(QStringLiteral("rating"));
     auto ratingObject = jsonObject[ratingKey].toObject();
