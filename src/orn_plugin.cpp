@@ -1,5 +1,6 @@
 #include "orn_plugin.h"
 #include "ornapirequest.h"
+#include "ornclient.h"
 #include "ornapplication.h"
 #include "ornapplistitem.h"
 #include "orncommentlistitem.h"
@@ -18,6 +19,7 @@
 void OrnPlugin::registerTypes(const char *uri)
 {
     qmlRegisterType<OrnApiRequest>       (uri, 1, 0, "OrnApiRequest");
+    qmlRegisterType<OrnClient>           (uri, 1, 0, "OrnClient");
     qmlRegisterType<OrnApplication>      (uri, 1, 0, "OrnApplication");
     qmlRegisterType<OrnAppListItem>      (uri, 1, 0, "OrnAppListItem");
     qmlRegisterType<OrnCommentListItem>  (uri, 1, 0, "OrnCommentListItem");

@@ -23,6 +23,7 @@ OrnCommentListItem::OrnCommentListItem(const QJsonObject &jsonObject, QObject *p
     mText = mText.left(mText.length() - 1);
 
     auto user = jsonObject[QStringLiteral("user")].toObject();
+    mUserId = Orn::toUint(user[QStringLiteral("uid")]);
     mUserName = Orn::toString(user[QStringLiteral("name")]);
     mUserIconSource = Orn::toString(user[QStringLiteral("picture")].toObject()[QStringLiteral("url")]);
 

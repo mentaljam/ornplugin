@@ -6,14 +6,11 @@
 class OrnApiRequest : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(bool networkError READ networkError NOTIFY networkErrorChanged)
     Q_PROPERTY(QNetworkAccessManager* networkManager READ networkManager WRITE setNetworkManager NOTIFY networkManagerChanged)
 
 public:
     explicit OrnApiRequest(QObject *parent = 0);
     ~OrnApiRequest();
-
-    bool networkError() const;
 
     QNetworkAccessManager *networkManager() const;
     void setNetworkManager(QNetworkAccessManager *networkManager);
@@ -29,16 +26,11 @@ public slots:
 signals:
     void networkManagerChanged();
     void jsonReady(const QJsonDocument &jsonDoc);
-    void networkErrorChanged();
 
-private slots:
+protected slots:
     void onReplyFinished();
 
-private:
-    void setNetworkError(bool error);
-
 protected:
-    bool mNetworkError;
     QNetworkAccessManager *mNetworkManager;
     QNetworkReply *mNetworkReply;
 

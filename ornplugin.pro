@@ -16,6 +16,7 @@ SOURCES += \
     src/orn_plugin.cpp \
     src/orn.cpp \
     src/ornapirequest.cpp \
+    src/ornclient.cpp \
     src/ornversion.cpp \
     src/ornabstractlistmodel.cpp \
     src/ornabstractappsmodel.cpp \
@@ -36,6 +37,7 @@ HEADERS += \
     src/orn_plugin.h \
     src/orn.h \
     src/ornapirequest.h \
+    src/ornclient.h \
     src/ornversion.h \
     src/ornabstractlistmodel.h \
     src/ornabstractappsmodel.h \

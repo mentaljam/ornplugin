@@ -4,6 +4,7 @@
 #include "ornabstractlistmodel.h"
 
 class OrnCommentListItem;
+class QNetworkReply;
 
 class OrnCommentsModel : public OrnAbstractListModel
 {
@@ -19,8 +20,16 @@ public:
     Q_INVOKABLE OrnCommentListItem *findItem(const quint32 &cid) const;
     Q_INVOKABLE int findItemRow(const quint32 &cid) const;
 
+public slots:
+    void addComment(const quint32 &cid);
+    void editComment(const quint32 &cid);
+
 signals:
     void appIdChanged();
+
+private:
+    QNetworkReply *fetchComment(const quint32 &cid);
+    QJsonObject processReply(QNetworkReply *reply);
 
 private:
     quint32 mAppId;
@@ -31,6 +40,7 @@ public:
     QVariant data(const QModelIndex &index, int role) const;
     void fetchMore(const QModelIndex &parent);
     QHash<int, QByteArray> roleNames() const;
+//    Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
 
     // OrnAbstractListModel interface
 protected slots:
