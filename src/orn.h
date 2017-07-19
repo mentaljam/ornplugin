@@ -41,6 +41,7 @@ public:
     static bool isRepoInstalled(QString userId);
     static bool addRepo(const QString &userName);
     static bool modifyRepo(const QString &userName, const RepoAction &action);
+    static QString deviceModel();
 };
 
 #endif // ORN_H

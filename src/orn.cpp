@@ -90,3 +90,17 @@ bool Orn::modifyRepo(const QString &userName, const RepoAction &action)
     auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
     return call.errorName().isEmpty();
 }
+
+QString Orn::deviceModel()
+{
+    auto methodCall = QDBusMessage::createMethodCall(
+                ssuInterface,
+                ssuPath,
+                ssuInterface,
+                QStringLiteral("displayName"));
+    // Ssu::DeviceModel = 1
+    methodCall.setArguments({ 1 });
+    qDebug() << "Calling" << methodCall;
+    auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
+    return call.arguments().first().toString();
+}
