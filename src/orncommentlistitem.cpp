@@ -19,9 +19,6 @@ OrnCommentListItem::OrnCommentListItem(const QJsonObject &jsonObject, QObject *p
     mDate(OrnCommentListItem::sinceCreated(mCreated)),
     mCreatedTimer(new QTimer(this))
 {
-    // Comment text contains a trailing empty line
-    mText = mText.left(mText.length() - 1);
-
     auto user = jsonObject[QStringLiteral("user")].toObject();
     mUserId = Orn::toUint(user[QStringLiteral("uid")]);
     mUserName = Orn::toString(user[QStringLiteral("name")]);
