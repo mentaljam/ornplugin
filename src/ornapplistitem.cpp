@@ -69,5 +69,6 @@ QString OrnAppListItem::sinceLabel(const quint32 &value)
     }
     //: Output format for the month and year - %0 is a long month name and %1 is a year (for example "May 2017")
     //% "%0 %1"
-    return qtTrId("orn-month-format").arg(QDate::longMonthName(date.month())).arg(date.year());
+    return qtTrId("orn-month-format").arg(
+                QDate::longMonthName(date.month(), QDate::StandaloneFormat)).arg(date.year());
 }
