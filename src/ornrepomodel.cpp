@@ -133,18 +133,9 @@ void OrnRepoModel::onRepoUpdated(const QString &repoId, const QString &descripti
     emit this->enabledReposChanged();
 }
 
-void OrnRepoModel::onFinished(int status, uint runtime)
-{
-    auto t = static_cast<PackageKit::Transaction *>(QObject::sender());
-    qDebug() << "Transaction" << t->uid() << "finished in"
-             << runtime << "msec" << "with status" << status;
-    t->deleteLater();
-}
-
 PackageKit::Transaction *OrnRepoModel::transaction() const
 {
-    auto t = new PackageKit::Transaction();
-    connect(t, &PackageKit::Transaction::finished, this, &OrnRepoModel::onFinished);
+    auto t = Orn::transaction();
     connect(t, &PackageKit::Transaction::repoDetail, this, &OrnRepoModel::onRepoUpdated);
     return t;
 }

@@ -29,6 +29,7 @@ OrnClient::OrnClient(QObject *parent) :
     mSettings(new QSettings(this)),
     mCookieTimer(new QTimer(this))
 {
+    // Get device model
     QString deviceKey(DEVICE_MODEL);
     if (!mSettings->contains(deviceKey))
     {
@@ -37,6 +38,7 @@ OrnClient::OrnClient(QObject *parent) :
     }
     qDebug() << "Device model is" << this->deviceModel();
 
+    // Configure cookie timer
     mCookieTimer->setSingleShot(true);
     this->setCookieTimer();
 

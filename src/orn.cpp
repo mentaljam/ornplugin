@@ -1,5 +1,7 @@
 #include "orn.h"
 
+#include <PackageKit/packagekit-qt5/Transaction>
+
 #include <QJsonValue>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -103,4 +105,25 @@ QString Orn::deviceModel()
     qDebug() << "Calling" << methodCall;
     auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
     return call.arguments().first().toString();
+}
+
+PackageKit::Transaction *Orn::transaction()
+{
+    auto t = new PackageKit::Transaction();
+    QObject::connect(t, &PackageKit::Transaction::finished,
+                     [=](PackageKit::Transaction::Exit status, uint runtime)
+    {
+        qDebug() << "Transaction" << t->uid() << "finished in"
+                 << runtime << "msec" << "with status" << status;
+        t->deleteLater();
+    });
+#ifndef NDEBUG
+    QObject::connect(t, &PackageKit::Transaction::errorCode,
+                     [=](PackageKit::Transaction::Error error, const QString &details)
+    {
+        qDebug() << "An error occured while running transaction" << t->uid()
+                 << ":" << error << "-" << details;
+    });
+#endif
+    return t;
 }

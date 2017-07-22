@@ -75,14 +75,10 @@ public slots:
     void remove();
     void launch();
 
-private:
-    PackageKit::Transaction *transaction();
-
 private slots:
     void onRepoListChanged();
     void checkAppPackage(const PackageKit::Transaction::Filter &filter);
     void onRepoStatusChanged();
-    void onTransactionFinished(PackageKit::Transaction::Exit status, uint runtime);
     void checkRepoUpdate(const QString &repoId, const QString &description, bool enabled);
     void onPackage(PackageKit::Transaction::Info info, const QString &packageID, const QString &summary);
     void onInstalled(const QString &packageId, const QString &version);

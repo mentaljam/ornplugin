@@ -77,7 +77,7 @@ void OrnApplication::enableRepo()
     }
     else if (mRepoStatus == RepoDisabled)
     {
-        auto t = this->transaction();
+        auto t = Orn::transaction();
         connect(t, &PackageKit::Transaction::finished, [=]()
         {
             qDebug() << "Starting transaction" << t->uid() << "method checkRepoUpdate()";
@@ -94,7 +94,7 @@ void OrnApplication::enableRepo()
 
 void OrnApplication::install()
 {
-    auto t = this->transaction();
+    auto t = Orn::transaction();
     connect(t, &PackageKit::Transaction::finished, [=]()
     {
         this->onInstalled(mAvailablePackageId, mAvailableVersion);
@@ -106,7 +106,7 @@ void OrnApplication::install()
 
 void OrnApplication::remove()
 {
-    auto t = this->transaction();
+    auto t = Orn::transaction();
     connect(t, &PackageKit::Transaction::package, [=]()
     {
         qDebug() << "Package" << mInstalledPackageId << "was removed";
@@ -130,24 +130,9 @@ void OrnApplication::launch()
     QDesktopServices::openUrl(QUrl::fromLocalFile(mDesktopFile));
 }
 
-PackageKit::Transaction *OrnApplication::transaction()
-{
-    auto t = new PackageKit::Transaction();
-    connect(t, &PackageKit::Transaction::finished, this, &OrnApplication::onTransactionFinished);
-#ifndef NDEBUG
-    connect(t, &PackageKit::Transaction::errorCode,
-            [=](PackageKit::Transaction::Error error, const QString &details)
-    {
-        qDebug() << "An error occured while running transaction" << t->uid()
-                 << ":" << error << "-" << details;
-    });
-#endif
-    return t;
-}
-
 void OrnApplication::onRepoListChanged()
 {
-    auto t = this->transaction();
+    auto t = Orn::transaction();
     connect(t, &PackageKit::Transaction::repoDetail, this, &OrnApplication::checkRepoUpdate);
     qDebug() << "Repositories list has been changed. Starting transaction" << t->uid()
              << "method getRepoList() to check for application"
@@ -157,7 +142,7 @@ void OrnApplication::onRepoListChanged()
 
 void OrnApplication::checkAppPackage(const PackageKit::Transaction::Filter &filter)
 {
-    auto t = this->transaction();
+    auto t = Orn::transaction();
     connect(t, &PackageKit::Transaction::package, this, &OrnApplication::onPackage);
     qDebug() << "Resolving package" << mPackageName
              << PackageKit::Daemon::enumToString<PackageKit::Transaction>(filter, "Filter")
@@ -171,7 +156,7 @@ void OrnApplication::onRepoStatusChanged()
     {
         return;
     }
-    auto t = this->transaction();
+    auto t = Orn::transaction();
     connect(t, &PackageKit::Transaction::finished, [=](PackageKit::Transaction::Exit status, uint runtime)
     {
         // Get available package versions after repository refresh
@@ -184,13 +169,6 @@ void OrnApplication::onRepoStatusChanged()
     qDebug() << "Refreshing" << mRepoId << "by starting transaction"
              << t->uid() << "method repoSetData()";
     t->repoSetData(mRepoId, QStringLiteral("refresh-now"), QStringLiteral("false"));
-}
-
-void OrnApplication::onTransactionFinished(PackageKit::Transaction::Exit status, uint runtime)
-{
-    auto t = static_cast<PackageKit::Transaction *>(QObject::sender());
-    qDebug() << "Transaction" << t->uid() << "finished in" << runtime << "msec" << "with status" << status;
-    t->deleteLater();
 }
 
 void OrnApplication::checkRepoUpdate(const QString &repoId, const QString &description, bool enabled)

@@ -42,7 +42,6 @@ signals:
 
 private slots:
     void onRepoUpdated(const QString &repoId, const QString &description, bool enabled);
-    void onFinished(int status, uint runtime);
 
 private:
     PackageKit::Transaction *transaction() const;
