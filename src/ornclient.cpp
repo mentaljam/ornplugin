@@ -102,7 +102,9 @@ void OrnClient::login(const QString &username, const QString &password)
 {
     Q_ASSERT_X(mNetworkManager, Q_FUNC_INFO, "networkManager must be set");
 
-    this->logout();
+    // Stop timer and remove old credentials
+    this->setCookieTimer();
+    mSettings->remove(QStringLiteral("user"));
 
     QNetworkRequest request;
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("user/login")));
