@@ -7,9 +7,20 @@
 #include <QDebug>
 
 OrnRepoModel::OrnRepoModel(QObject *parent) :
-    QAbstractListModel(parent)
+    QAbstractListModel(parent),
+    mEnabledRepos(0)
 {
     this->reset();
+}
+
+bool OrnRepoModel::hasEnabledRepos() const
+{
+    return mEnabledRepos;
+}
+
+bool OrnRepoModel::hasDisabledRepos() const
+{
+    return mEnabledRepos != mData.size();
 }
 
 void OrnRepoModel::reset()
@@ -18,6 +29,11 @@ void OrnRepoModel::reset()
     this->beginResetModel();
     mData.clear();
     this->endResetModel();
+    if (mEnabledRepos != 0)
+    {
+        mEnabledRepos = 0;
+        emit this->enabledReposChanged();
+    }
     auto t = this->transaction();
     qDebug() << "Starting transaction" << t->uid() << "method getRepoList()";
     t->getRepoList();
@@ -30,6 +46,14 @@ void OrnRepoModel::enableRepo(const QString &repoId, bool enable)
     t->repoEnable(repoId, enable);
     // Transaction::repoEnable() does not emmit any signal?
     this->onRepoUpdated(repoId, QString(), enable);
+}
+
+void OrnRepoModel::enableRepos(bool enable)
+{
+    for (const auto &repo : mData)
+    {
+        this->enableRepo(repo.id, enable);
+    }
 }
 
 void OrnRepoModel::refreshRepo(const QString &repoId)
@@ -51,6 +75,8 @@ void OrnRepoModel::removeRepo(const QString &repoAuthor)
                 this->beginRemoveRows(QModelIndex(), i, i);
                 mData.removeAt(i);
                 this->endRemoveRows();
+                --mEnabledRepos;
+                emit this->enabledReposChanged();
             }
             else
             {
@@ -89,6 +115,8 @@ void OrnRepoModel::onRepoUpdated(const QString &repoId, const QString &descripti
                 qDebug() << "Updating repo" << repo.id;
                 auto index = this->createIndex(row, 0);
                 emit this->dataChanged(index, index, { RepoEnabledRole });
+                mEnabledRepos += enabled ? 1 : -1;
+                emit this->enabledReposChanged();
             }
             // Nothing to be done
             return;
@@ -101,6 +129,8 @@ void OrnRepoModel::onRepoUpdated(const QString &repoId, const QString &descripti
     this->beginInsertRows(QModelIndex(), row, row);
     mData << Repo{ enabled, repoId, author };
     this->endInsertRows();
+    ++mEnabledRepos;
+    emit this->enabledReposChanged();
 }
 
 void OrnRepoModel::onFinished(int status, uint runtime)

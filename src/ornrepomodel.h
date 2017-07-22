@@ -10,6 +10,8 @@ class Transaction;
 class OrnRepoModel : public QAbstractListModel
 {
     Q_OBJECT
+    Q_PROPERTY(bool hasEnabledRepos READ hasEnabledRepos NOTIFY enabledReposChanged)
+    Q_PROPERTY(bool hasDisabledRepos READ hasDisabledRepos NOTIFY enabledReposChanged)
 
 public:
 
@@ -24,14 +26,19 @@ public:
 
     explicit OrnRepoModel(QObject *parent = 0);
 
+    bool hasEnabledRepos() const;
+    bool hasDisabledRepos() const;
+
 public slots:
     void reset();
     void enableRepo(const QString &repoId, bool enable);
+    void enableRepos(bool enable);
     void refreshRepo(const QString &repoId);
     void removeRepo(const QString &repoAuthor);
 
 signals:
     void errorRemoveRepo();
+    void enabledReposChanged();
 
 private slots:
     void onRepoUpdated(const QString &repoId, const QString &description, bool enabled);
@@ -49,6 +56,7 @@ private:
         QString author;
     };
 
+    int mEnabledRepos;
     QList<Repo> mData;
 
     // QAbstractItemModel interface
