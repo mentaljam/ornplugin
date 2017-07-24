@@ -20,6 +20,7 @@ public:
     };
 
     static const QString repoNamePrefix;
+    static const int repoNamePrefixLength;
     static const QString repoUrlTemplate;
     static const QString repoFileTemplate;
 

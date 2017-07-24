@@ -31,7 +31,8 @@ SOURCES += \
     src/ornsearchappsmodel.cpp \
     src/orncategoriesmodel.cpp \
     src/orncategorylistitem.cpp \
-    src/orncategoryappsmodel.cpp
+    src/orncategoryappsmodel.cpp \
+    src/orninstalledappsmodel.cpp
 
 HEADERS += \
     src/orn_plugin.h \
@@ -52,7 +53,8 @@ HEADERS += \
     src/ornsearchappsmodel.h \
     src/orncategoriesmodel.h \
     src/orncategorylistitem.h \
-    src/orncategoryappsmodel.h
+    src/orncategoryappsmodel.h \
+    src/orninstalledappsmodel.h
 
 OTHER_FILES += \
     scripts/update_categories.py

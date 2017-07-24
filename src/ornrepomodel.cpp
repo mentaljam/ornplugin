@@ -25,7 +25,7 @@ bool OrnRepoModel::hasDisabledRepos() const
 
 void OrnRepoModel::reset()
 {
-    qDebug() << "Clearing model";
+    qDebug() << "Resetting model";
     this->beginResetModel();
     mData.clear();
     this->endResetModel();
@@ -103,7 +103,7 @@ void OrnRepoModel::onRepoUpdated(const QString &repoId, const QString &descripti
     }
 
     // Remove "openrepos-" prefix
-    auto author = repoId.mid(Orn::repoNamePrefix.length());
+    auto author = repoId.mid(Orn::repoNamePrefixLength);
     int row = 0;
     for (auto &repo: mData)
     {
