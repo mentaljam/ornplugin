@@ -1,5 +1,4 @@
 #include "ornzypp.h"
-#include "orn.h"
 
 #include <zypp/RepoManager.h>
 #include <zypp/ZYppFactory.h>
@@ -9,12 +8,74 @@
 #include <QSettings>
 #include <QLocale>
 #include <QFileInfo>
+
+#include <QtDBus/QDBusMessage>
+#include <QtDBus/QDBusConnection>
+
 #include <QDebug>
+
+#define REPO_BASEURL           QStringLiteral("https://sailfish.openrepos.net/%0/personal/main")
+#define SSU_INTERFACE          QStringLiteral("org.nemo.ssu")
+#define SSU_PATH               QStringLiteral("/org/nemo/ssu")
+#define SSU_METHOD_MODIFYREPO  QStringLiteral("modifyRepo")
+#define SSU_METHOD_ADDREPO     QStringLiteral("addRepo")
+#define SSU_METHOD_DISPLAYNAME QStringLiteral("displayName")
+
+const QString OrnZypp::repoNamePrefix(QStringLiteral("openrepos-"));
+const int OrnZypp::repoNamePrefixLength = OrnZypp::repoNamePrefix.length();
 
 OrnZypp::OrnZypp(QObject *parent) :
     QObject(parent)
 {
 
+}
+
+bool OrnZypp::hasRepo(QString alias)
+{
+    if (!alias.startsWith(repoNamePrefix))
+    {
+        alias.prepend(repoNamePrefix);
+    }
+    return zypp::RepoManager().hasRepo(alias.toStdString());
+}
+
+bool OrnZypp::repoAction(const QString &author, const RepoAction &action)
+{
+    auto interface = SSU_INTERFACE;
+    bool addRepo = action == AddRepo;
+    auto method = addRepo ? SSU_METHOD_ADDREPO : SSU_METHOD_MODIFYREPO;
+    auto alias = repoNamePrefix + author;
+    auto args = addRepo ? QVariantList{ alias, REPO_BASEURL.arg(author) } :
+                          QVariantList{ action, alias };
+    auto methodCall = QDBusMessage::createMethodCall(
+                interface,
+                SSU_PATH,
+                interface,
+                method);
+    methodCall.setArguments(args);
+    qDebug() << "Calling" << methodCall;
+    auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
+    if (!call.errorName().isEmpty())
+    {
+        qDebug() << call.errorMessage();
+        return false;
+    }
+    return true;
+}
+
+QString OrnZypp::deviceModel()
+{
+    auto interface = SSU_INTERFACE;
+    auto methodCall = QDBusMessage::createMethodCall(
+                interface,
+                SSU_PATH,
+                interface,
+                SSU_METHOD_DISPLAYNAME);
+    // Ssu::DeviceModel = 1
+    methodCall.setArguments({ 1 });
+    qDebug() << "Calling" << methodCall;
+    auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
+    return call.arguments().first().toString();
 }
 
 void OrnZypp::getInstalledApps()
@@ -31,7 +92,7 @@ void OrnZypp::pInstalledApps()
     {
         auto alias = repo.alias();
         auto qalias = QString::fromStdString(alias);
-        if (qalias.startsWith(Orn::repoNamePrefix))
+        if (qalias.startsWith(repoNamePrefix))
         {
             qDebug() << "Loading cache for" << qalias;
             manager.loadFromCache(repo);
@@ -131,7 +192,7 @@ void OrnZypp::pInstalledApps()
                     qname,
                     qtitle,
                     QString::fromStdString(edition.asString()),
-                    QString::fromStdString(repo).mid(Orn::repoNamePrefixLength),
+                    QString::fromStdString(repo).mid(repoNamePrefixLength),
                     qicon
                 };
             }

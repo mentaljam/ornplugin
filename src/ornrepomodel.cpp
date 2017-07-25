@@ -1,5 +1,6 @@
 #include "ornrepomodel.h"
 #include "orn.h"
+#include "ornzypp.h"
 
 #include <PackageKit/packagekit-qt5/Transaction>
 
@@ -70,7 +71,7 @@ void OrnRepoModel::removeRepo(const QString &repoAuthor)
     {
         if (mData[i].author == repoAuthor)
         {
-            if (Orn::modifyRepo(repoAuthor, Orn::RemoveRepo))
+            if (OrnZypp::repoAction(repoAuthor, OrnZypp::RemoveRepo))
             {
                 this->beginRemoveRows(QModelIndex(), i, i);
                 mData.removeAt(i);
@@ -81,13 +82,13 @@ void OrnRepoModel::removeRepo(const QString &repoAuthor)
             else
             {
                 qWarning() << "Could not remove repo"
-                           << Orn::repoNamePrefix + repoAuthor;
+                           << OrnZypp::repoNamePrefix + repoAuthor;
                 emit this->errorRemoveRepo();
             }
             return;
         }
     }
-    qWarning() << "Could not find repo" << Orn::repoNamePrefix + repoAuthor
+    qWarning() << "Could not find repo" << OrnZypp::repoNamePrefix + repoAuthor
                << "to remove";
     emit this->errorRemoveRepo();
 }
@@ -96,14 +97,14 @@ void OrnRepoModel::onRepoUpdated(const QString &repoId, const QString &descripti
 {
     Q_UNUSED(description)
 
-    if (!repoId.startsWith(Orn::repoNamePrefix))
+    if (!repoId.startsWith(OrnZypp::repoNamePrefix))
     {
         qDebug() << repoId << "is not an OpenRepos repo";
         return;
     }
 
     // Remove "openrepos-" prefix
-    auto author = repoId.mid(Orn::repoNamePrefixLength);
+    auto author = repoId.mid(OrnZypp::repoNamePrefixLength);
     int row = 0;
     for (auto &repo: mData)
     {

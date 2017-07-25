@@ -1,6 +1,7 @@
 #include "ornapplication.h"
 #include "orn.h"
 #include "ornversion.h"
+#include "ornzypp.h"
 
 #include <PackageKit/packagekit-qt5/Daemon>
 
@@ -63,7 +64,7 @@ void OrnApplication::enableRepo()
     Q_ASSERT_X(!mRepoId.isEmpty(), Q_FUNC_INFO, "Repo ID is empty. Run setAppId() and then update()");
     if (mRepoStatus == RepoNotInstalled)
     {
-        if (Orn::addRepo(mUserName))
+        if (OrnZypp::repoAction(mUserName, OrnZypp::AddRepo))
         {
             qDebug() << "Installed repo" << mRepoId;
             mRepoStatus = RepoEnabled;
@@ -179,7 +180,7 @@ void OrnApplication::checkRepoUpdate(const QString &repoId, const QString &descr
         return;
     }
     // NOTE: will this work for removed repos?
-    auto status = Orn::isRepoInstalled(repoId) ? RepoDisabled : RepoNotInstalled;
+    auto status = OrnZypp::hasRepo(repoId) ? RepoDisabled : RepoNotInstalled;
     if (enabled)
     {
         status = RepoEnabled;
@@ -296,7 +297,7 @@ void OrnApplication::onJsonREady(const QJsonDocument &jsonDoc)
     if (!mUserName.isEmpty())
     {
         // Generate repository name
-        mRepoId = Orn::repoNamePrefix + mUserName;
+        mRepoId = OrnZypp::repoNamePrefix + mUserName;
         // Check if repository is enabled
         this->onRepoListChanged();
         // Check if application is installed

@@ -11,16 +11,6 @@
 #include <QtDBus/QDBusConnection>
 #include <QDebug>
 
-const QString Orn::repoNamePrefix(QStringLiteral("openrepos-"));
-const int Orn::repoNamePrefixLength = Orn::repoNamePrefix.length();
-const QString Orn::repoUrlTemplate(QStringLiteral("https://sailfish.openrepos.net/%0/personal/main"));
-const QString Orn::repoFileTemplate(QStringLiteral("/etc/zypp/repos.d/ssu_%0_release.repo"));
-
-const QString Orn::ssuInterface(QStringLiteral("org.nemo.ssu"));
-const QString Orn::ssuPath(QStringLiteral("/org/nemo/ssu"));
-const QString Orn::ssuModifyRepoMethod(QStringLiteral("modifyRepo"));
-const QString Orn::ssuAddRepoMethod(QStringLiteral("addRepo"));
-
 Orn::Orn()
 {
 
@@ -51,61 +41,6 @@ QList<quint32> Orn::toIntList(const QJsonValue &value)
         list << Orn::toUint(v.toObject()[tidKey]);
     }
     return list;
-}
-
-bool Orn::isRepoInstalled(QString userId)
-{
-    if (!userId.startsWith(repoNamePrefix))
-    {
-        userId.prepend(repoNamePrefix);
-    }
-    return QFile(repoFileTemplate.arg(userId)).exists();
-}
-
-bool Orn::addRepo(const QString &userName)
-{
-    auto methodCall = QDBusMessage::createMethodCall(
-                ssuInterface,
-                ssuPath,
-                ssuInterface,
-                ssuAddRepoMethod);
-    methodCall.setArguments({
-                                repoNamePrefix + userName,
-                                repoUrlTemplate.arg(userName)
-                            });
-    qDebug() << "Calling" << methodCall;
-    auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
-    return call.errorName().isEmpty();
-}
-
-bool Orn::modifyRepo(const QString &userName, const RepoAction &action)
-{
-    auto methodCall = QDBusMessage::createMethodCall(
-                ssuInterface,
-                ssuPath,
-                ssuInterface,
-                ssuModifyRepoMethod);
-    methodCall.setArguments({
-                                action,
-                                repoNamePrefix + userName
-                            });
-    qDebug() << "Calling" << methodCall;
-    auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
-    return call.errorName().isEmpty();
-}
-
-QString Orn::deviceModel()
-{
-    auto methodCall = QDBusMessage::createMethodCall(
-                ssuInterface,
-                ssuPath,
-                ssuInterface,
-                QStringLiteral("displayName"));
-    // Ssu::DeviceModel = 1
-    methodCall.setArguments({ 1 });
-    qDebug() << "Calling" << methodCall;
-    auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
-    return call.arguments().first().toString();
 }
 
 PackageKit::Transaction *Orn::transaction()

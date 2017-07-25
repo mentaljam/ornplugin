@@ -1,5 +1,6 @@
 #include "ornclient.h"
 #include "orn.h"
+#include "ornzypp.h"
 
 #include <QSettings>
 #include <QTimer>
@@ -33,7 +34,7 @@ OrnClient::OrnClient(QObject *parent) :
     QString deviceKey(DEVICE_MODEL);
     if (!mSettings->contains(deviceKey))
     {
-        mSettings->setValue(deviceKey, Orn::deviceModel());
+        mSettings->setValue(deviceKey, OrnZypp::deviceModel());
         emit this->deviceModelChanged();
     }
     qDebug() << "Device model is" << this->deviceModel();
