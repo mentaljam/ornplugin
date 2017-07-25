@@ -14,6 +14,7 @@
 #include "ornproxymodel.h"
 #include "orncommentsmodel.h"
 #include "orncategoriesmodel.h"
+#include "ornzypp.h"
 
 #include <qqml.h>
 
@@ -34,4 +35,6 @@ void OrnPlugin::registerTypes(const char *uri)
     qmlRegisterType<OrnProxyModel>        (uri, 1, 0, "OrnProxyModel");
     qmlRegisterType<OrnCommentsModel>     (uri, 1, 0, "OrnCommentsModel");
     qmlRegisterType<OrnCategoriesModel>   (uri, 1, 0, "OrnCategoriesModel");
+
+    qRegisterMetaType<OrnZypp::AppList>("AppList");
 }
