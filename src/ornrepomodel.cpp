@@ -129,7 +129,7 @@ void OrnRepoModel::onRepoUpdated(const QString &repoId, const QString &descripti
     this->beginInsertRows(QModelIndex(), row, row);
     mData << Repo{ enabled, repoId, author };
     this->endInsertRows();
-    ++mEnabledRepos;
+    mEnabledRepos += enabled;
     emit this->enabledReposChanged();
 }
 
