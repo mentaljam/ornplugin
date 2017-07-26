@@ -11,39 +11,37 @@
 #include <QtDBus/QDBusConnection>
 #include <QDebug>
 
-Orn::Orn()
+namespace Orn
 {
 
-}
-
-quint32 Orn::toUint(const QJsonValue &value)
+quint32 toUint(const QJsonValue &value)
 {
     return value.toString().remove(QChar(',')).toUInt();
 }
 
-QString Orn::toString(const QJsonValue &value)
+QString toString(const QJsonValue &value)
 {
     return value.toString().trimmed();
 }
 
-QDateTime Orn::toDateTime(const QJsonValue &value)
+QDateTime toDateTime(const QJsonValue &value)
 {
     return QDateTime::fromMSecsSinceEpoch((quint64)toUint(value) * 1000);
 }
 
-QList<quint32> Orn::toIntList(const QJsonValue &value)
+QList<quint32> toIntList(const QJsonValue &value)
 {
     auto array = value.toArray();
     QString tidKey(QStringLiteral("tid"));
     QList<quint32> list;
     for (const QJsonValue &v: array)
     {
-        list << Orn::toUint(v.toObject()[tidKey]);
+        list << toUint(v.toObject()[tidKey]);
     }
     return list;
 }
 
-PackageKit::Transaction *Orn::transaction()
+PackageKit::Transaction *transaction()
 {
     auto t = new PackageKit::Transaction();
     QObject::connect(t, &PackageKit::Transaction::finished,
@@ -63,3 +61,5 @@ PackageKit::Transaction *Orn::transaction()
 #endif
     return t;
 }
+
+} // namespace Orn

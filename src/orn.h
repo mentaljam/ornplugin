@@ -7,21 +7,19 @@
 
 namespace PackageKit { class Transaction; }
 
-class Orn
+namespace Orn
 {
-public:
 
-    Orn();
+quint32 toUint(const QJsonValue &value);
 
-    static quint32 toUint(const QJsonValue &value);
+QString toString(const QJsonValue &value);
 
-    static QString toString(const QJsonValue &value);
+QDateTime toDateTime(const QJsonValue &value);
 
-    static QDateTime toDateTime(const QJsonValue &value);
+QList<quint32> toIntList(const QJsonValue &value);
 
-    static QList<quint32> toIntList(const QJsonValue &value);
+PackageKit::Transaction *transaction();
 
-    static PackageKit::Transaction *transaction();
-};
+} // namespace Orn
 
 #endif // ORN_H
