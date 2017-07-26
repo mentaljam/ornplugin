@@ -5,6 +5,7 @@
 #include <PackageKit/packagekit-qt5/Transaction>
 
 #include <QFile>
+#include <QtConcurrent/QtConcurrent>
 #include <QDebug>
 
 OrnRepoModel::OrnRepoModel(QObject *parent) :
@@ -46,22 +47,22 @@ void OrnRepoModel::enableRepo(const QString &repoId, bool enable)
     qDebug() << "Starting transaction" << t->uid() << "method repoEnable()";
     t->repoEnable(repoId, enable);
     // Transaction::repoEnable() does not emmit any signal?
-    this->onRepoUpdated(repoId, QString(), enable);
+    emit t->repoDetail(repoId, QString(), enable);
 }
 
 void OrnRepoModel::enableRepos(bool enable)
 {
-    for (const auto &repo : mData)
+    QtConcurrent::map(mData, [=](const Repo &repo)
     {
         this->enableRepo(repo.id, enable);
-    }
+    });
 }
 
 void OrnRepoModel::refreshRepo(const QString &repoId)
 {
     auto t = this->transaction();
     qDebug() << "Starting transaction" << t->uid() << "method repoSetData()";
-    t->repoSetData(repoId, QStringLiteral("refresh-now"), QStringLiteral("false"));
+    t->repoSetData(repoId, QStringLiteral("refresh-now"), QStringLiteral("true"));
 }
 
 void OrnRepoModel::removeRepo(const QString &repoAuthor)

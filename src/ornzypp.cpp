@@ -27,7 +27,7 @@ const int OrnZypp::repoNamePrefixLength = OrnZypp::repoNamePrefix.length();
 OrnZypp::OrnZypp(QObject *parent) :
     QObject(parent)
 {
-
+    zypp::ZYppFactory::instance().getZYpp()->initializeTarget("/");
 }
 
 bool OrnZypp::hasRepo(QString alias)
@@ -101,8 +101,7 @@ void OrnZypp::pInstalledApps()
 
     // Load zypp target
     zypp::ZYpp &zypp = *zypp::ZYppFactory::instance().getZYpp();
-    zypp.initializeTarget("/");
-    zypp.target()->load();
+    zypp.target()->reload();
 
     // Prepare vars for parsing desktop files
     QString desktop(QStringLiteral(".desktop"));
