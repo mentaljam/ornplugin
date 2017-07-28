@@ -8,6 +8,8 @@
 
 class OrnApplication : public OrnApiRequest
 {
+    friend class OrnBookmarksModel;
+
     Q_OBJECT
 
     Q_PROPERTY(bool canBeLaunched READ canBeLaunched NOTIFY canBeLaunchedChanged)
@@ -29,6 +31,7 @@ class OrnApplication : public OrnApiRequest
     Q_PROPERTY(QString packageName MEMBER mPackageName NOTIFY updated)
     Q_PROPERTY(QString body MEMBER mBody NOTIFY updated)
     Q_PROPERTY(QString changelog MEMBER mChangelog NOTIFY updated)
+    Q_PROPERTY(QString category MEMBER mCategory NOTIFY updated)
     Q_PROPERTY(QDateTime created MEMBER mCreated NOTIFY updated)
     Q_PROPERTY(QDateTime updated MEMBER mUpdated NOTIFY updated)
     Q_PROPERTY(QVariantList screenshots MEMBER mScreenshots NOTIFY updated)
@@ -83,7 +86,7 @@ private slots:
     void onPackage(PackageKit::Transaction::Info info, const QString &packageID, const QString &summary);
     void onInstalled(const QString &packageId, const QString &version);
     void checkUpdates();
-    void onJsonREady(const QJsonDocument &jsonDoc);
+    void onJsonReady(const QJsonDocument &jsonDoc);
 
 private:
     bool mUpdateAvailable;
@@ -111,6 +114,7 @@ private:
     QString mPackageName;
     QString mBody;
     QString mChangelog;
+    QString mCategory;
     QDateTime mCreated;
     QDateTime mUpdated;    
     QList<quint32> mTagsIds;

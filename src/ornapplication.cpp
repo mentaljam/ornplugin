@@ -2,6 +2,7 @@
 #include "orn.h"
 #include "ornversion.h"
 #include "ornzypp.h"
+#include "orncategorylistitem.h"
 
 #include <PackageKit/packagekit-qt5/Daemon>
 
@@ -24,7 +25,7 @@ OrnApplication::OrnApplication(QObject *parent) :
     mCommentsCount(0),
     mRating(0.0)
 {
-    connect(this, &OrnApplication::jsonReady, this, &OrnApplication::onJsonREady);
+    connect(this, &OrnApplication::jsonReady, this, &OrnApplication::onJsonReady);
     connect(PackageKit::Daemon::global(), &PackageKit::Daemon::repoListChanged,
             this, &OrnApplication::onRepoListChanged);
     connect(this, &OrnApplication::repoStatusChanged, this, &OrnApplication::onRepoStatusChanged);
@@ -252,7 +253,7 @@ void OrnApplication::checkUpdates()
     }
 }
 
-void OrnApplication::onJsonREady(const QJsonDocument &jsonDoc)
+void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
 {
     auto jsonObject = jsonDoc.object();
     QString urlKey(QStringLiteral("url"));
@@ -278,8 +279,9 @@ void OrnApplication::onJsonREady(const QJsonDocument &jsonDoc)
     mRatingCount = Orn::toUint(ratingObject[QStringLiteral("count")]);
     mRating = ratingObject[ratingKey].toString().toFloat();
 
-    mTagsIds = Orn::toIntList(QStringLiteral("tags"));
-    mCategoryIds = Orn::toIntList(QStringLiteral("category"));
+    mTagsIds = Orn::toIntList(jsonObject[QStringLiteral("tags")]);
+    mCategoryIds = Orn::toIntList(jsonObject[QStringLiteral("category")]);
+    mCategory = OrnCategoryListItem::categoryName(mCategoryIds.last());
 
     QString thumbsKey(QStringLiteral("thumbs"));
     QString largeKey(QStringLiteral("large"));
