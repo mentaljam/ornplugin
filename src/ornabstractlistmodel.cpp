@@ -11,7 +11,6 @@ OrnAbstractListModel::OrnAbstractListModel(bool fetchable, QObject *parent) :
     mPage(0),
     mApiRequest(new OrnApiRequest(this))
 {
-    connect(mApiRequest, &OrnApiRequest::networkManagerChanged, this, &OrnAbstractListModel::reset);
     connect(mApiRequest, &OrnApiRequest::jsonReady, this, &OrnAbstractListModel::onJsonReady);
 }
 
@@ -58,11 +57,5 @@ int OrnAbstractListModel::rowCount(const QModelIndex &parent) const
 
 bool OrnAbstractListModel::canFetchMore(const QModelIndex &parent) const
 {
-#ifndef NDEBUG
-    if (!mApiRequest->networkManager())
-    {
-        qWarning() << "Network manager is not set";
-    }
-#endif
-    return (!parent.isValid() && mApiRequest->networkManager()) ? mCanFetchMore : false;
+    return !parent.isValid() ? mCanFetchMore : false;
 }

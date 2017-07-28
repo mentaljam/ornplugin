@@ -10,9 +10,10 @@ const QByteArray OrnApiRequest::langValue(QLocale::system().name().left(2).toUtf
 const QByteArray OrnApiRequest::platformName(QByteArrayLiteral("Warehouse-Platform"));
 const QByteArray OrnApiRequest::platformValue(QByteArrayLiteral("SailfishOS"));
 
+extern QNetworkAccessManager *ornNetworkAccessManager;
+
 OrnApiRequest::OrnApiRequest(QObject *parent) :
     QObject(parent),
-    mNetworkManager(0),
     mNetworkReply(0)
 {
 
@@ -26,30 +27,15 @@ OrnApiRequest::~OrnApiRequest()
     }
 }
 
-QNetworkAccessManager *OrnApiRequest::networkManager() const
-{
-    return mNetworkManager;
-}
-
-void OrnApiRequest::setNetworkManager(QNetworkAccessManager *networkManager)
-{
-    if (mNetworkManager != networkManager)
-    {
-        mNetworkManager = networkManager;
-        emit this->networkManagerChanged();
-    }
-}
-
 void OrnApiRequest::run(const QNetworkRequest &request)
 {
-    Q_ASSERT_X(mNetworkManager, Q_FUNC_INFO, "networkManager must be set");
     if (mNetworkReply)
     {
         qDebug() << "Request is already running";
         return;
     }
     qDebug() << "Fetching data from" << request.url().toString();
-    mNetworkReply = mNetworkManager->get(request);
+    mNetworkReply = ornNetworkAccessManager->get(request);
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnApiRequest::onReplyFinished);
 }
 

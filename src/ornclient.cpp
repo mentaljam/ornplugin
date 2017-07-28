@@ -10,6 +10,11 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QFile>
+#include <QStandardPaths>
+#include <QDataStream>
+#include <QDir>
+#include <QGuiApplication>
 #include <QDebug>
 
 #define DEVICE_MODEL        QStringLiteral("device")
@@ -24,6 +29,8 @@
 #define USER_PICTURE        QStringLiteral("user/picture/url")
 
 #define APPLICATION_JSON    QByteArrayLiteral("application/json")
+
+extern QNetworkAccessManager *ornNetworkAccessManager;
 
 OrnClient::OrnClient(QObject *parent) :
     OrnApiRequest(parent),
@@ -44,28 +51,69 @@ OrnClient::OrnClient(QObject *parent) :
     this->setCookieTimer();
 
     // Check if authorisation has expired
-    connect(this, &OrnClient::networkManagerChanged, [=]()
+    if (this->authorised())
     {
-        if (mNetworkManager && this->authorised())
+        qDebug() << "Checking authorisation status";
+        auto request = this->authorisedRequest();
+        request.setUrl(OrnClient::apiUrl(QStringLiteral("session")));
+        mNetworkReply = ornNetworkAccessManager->get(request);
+        connect(mNetworkReply, &QNetworkReply::finished, [=]()
         {
-            qDebug() << "Checking authorisation status";
-            auto request = this->authorisedRequest();
-            request.setUrl(OrnClient::apiUrl(QStringLiteral("session")));
-            mNetworkReply = mNetworkManager->get(request);
-            connect(mNetworkReply, &QNetworkReply::finished, [=]()
-            {
 #ifndef NDEBUG
-                if (this->processReply().object().contains(QStringLiteral("token")))
-                {
-                    qDebug() << "Client is authorised";
-                }
+            if (this->processReply().object().contains(QStringLiteral("token")))
+            {
+                qDebug() << "Client is authorised";
+            }
 #else
-                this->processReply();
+            this->processReply();
 #endif
-                this->reset();
-            });
+            this->reset();
+        });
+    }
+
+    // Read ids of bookmarked apps
+    auto path = QStandardPaths::locate(
+                QStandardPaths::AppLocalDataLocation, QStringLiteral("bookmarks"));
+    if (!path.isEmpty())
+    {
+        QFile file(path);
+        if (file.open(QFile::ReadOnly))
+        {
+            qDebug() << "Reading bookmarks file" << path;
+            QDataStream stream(&file);
+            stream >> mBookmarks;
         }
-    });
+        else
+        {
+            qWarning() << "Could not read bookmarks file" << path;
+        }
+    }
+
+    // A workaround as qml does not call a destructor
+    connect(qApp, &QGuiApplication::aboutToQuit, this, &OrnClient::deleteLater);
+}
+
+OrnClient::~OrnClient()
+{
+    // Write ids of bookmarked apps
+    auto dir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+    if (!dir.exists() && !dir.mkpath(QChar('.')))
+    {
+        qWarning() << "Could not create local data dir" << dir.path();
+        return;
+    }
+    auto path = dir.absoluteFilePath(QStringLiteral("bookmarks"));
+    QFile file(path);
+    if (file.open(QFile::WriteOnly))
+    {
+        qDebug() << "Writing bookmarks file" << path;
+        QDataStream stream(&file);
+        stream << mBookmarks;
+    }
+    else
+    {
+        qWarning() << "Could not write bookmarks file" << path;
+    }
 }
 
 bool OrnClient::authorised() const
@@ -101,10 +149,41 @@ QString OrnClient::userIconSource() const
     return mSettings->value(USER_PICTURE).toString();
 }
 
+QList<quint32> OrnClient::bookmarks() const
+{
+    return mBookmarks.toList();
+}
+
+bool OrnClient::hasBookmark(const quint32 &appId) const
+{
+    return mBookmarks.contains(appId);
+}
+
+bool OrnClient::addBookmark(const quint32 &appId)
+{
+    auto ok = !mBookmarks.contains(appId);
+    if (ok)
+    {
+        qDebug() << "Adding to bookmarks app id" << appId;
+        mBookmarks.insert(appId);
+        emit this->bookmarkChanged(appId, true);
+    }
+    return ok;
+}
+
+bool OrnClient::removeBookmark(const quint32 &appId)
+{
+    auto ok = mBookmarks.remove(appId);
+    if (ok)
+    {
+        qDebug() << "Removing from bookmarks app id" << appId;
+        emit this->bookmarkChanged(appId, false);
+    }
+    return ok;
+}
+
 void OrnClient::login(const QString &username, const QString &password)
 {
-    Q_ASSERT_X(mNetworkManager, Q_FUNC_INFO, "networkManager must be set");
-
     // Stop timer and remove old credentials
     this->setCookieTimer();
     mSettings->remove(QStringLiteral("user"));
@@ -118,7 +197,7 @@ void OrnClient::login(const QString &username, const QString &password)
     jsonObject.insert(QStringLiteral("password"), password);
     QJsonDocument jsonDoc(jsonObject);
 
-    mNetworkReply = mNetworkManager->post(request, jsonDoc.toJson());
+    mNetworkReply = ornNetworkAccessManager->post(request, jsonDoc.toJson());
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onLoggedIn);
 }
 
@@ -134,8 +213,6 @@ void OrnClient::logout()
 
 void OrnClient::comment(const quint32 &appId, const QString &body, const quint32 &parentId)
 {
-    Q_ASSERT_X(mNetworkManager, Q_FUNC_INFO, "networkManager must be set");
-
     auto request = this->authorisedRequest();
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("comments")));
 
@@ -154,14 +231,12 @@ void OrnClient::comment(const quint32 &appId, const QString &body, const quint32
     commentObject.insert(QStringLiteral("comment_body"), undObject);
     QJsonDocument jsonDoc(commentObject);
 
-    mNetworkReply = mNetworkManager->post(request, jsonDoc.toJson());
+    mNetworkReply = ornNetworkAccessManager->post(request, jsonDoc.toJson());
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onNewComment);
 }
 
 void OrnClient::editComment(const quint32 &commentId, const QString &body)
 {
-    Q_ASSERT_X(mNetworkManager, Q_FUNC_INFO, "networkManager must be set");
-
     auto request = this->authorisedRequest();
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("comments/%0").arg(commentId)));
 
@@ -175,7 +250,7 @@ void OrnClient::editComment(const quint32 &commentId, const QString &body)
     commentObject.insert(QStringLiteral("comment_body"), undObject);
     QJsonDocument jsonDoc(commentObject);
 
-    mNetworkReply = mNetworkManager->put(request, jsonDoc.toJson());
+    mNetworkReply = ornNetworkAccessManager->put(request, jsonDoc.toJson());
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onCommentEdited);
 }
 

@@ -14,12 +14,20 @@
 #include "ornproxymodel.h"
 #include "orncommentsmodel.h"
 #include "orncategoriesmodel.h"
+#include "ornbookmarksmodel.h"
 #include "ornzypp.h"
 
 #include <qqml.h>
+#include <QNetworkAccessManager>
+
+/// The global pointer to the instance of network access manager
+QNetworkAccessManager *ornNetworkAccessManager = 0;
 
 void OrnPlugin::registerTypes(const char *uri)
 {
+    Q_ASSERT_X(!ornNetworkAccessManager, Q_FUNC_INFO, "ornNetworkAccessManager is already initialized");
+    ornNetworkAccessManager = new QNetworkAccessManager();
+
     qmlRegisterType<OrnApiRequest>        (uri, 1, 0, "OrnApiRequest");
     qmlRegisterType<OrnClient>            (uri, 1, 0, "OrnClient");
     qmlRegisterType<OrnApplication>       (uri, 1, 0, "OrnApplication");
@@ -35,6 +43,7 @@ void OrnPlugin::registerTypes(const char *uri)
     qmlRegisterType<OrnProxyModel>        (uri, 1, 0, "OrnProxyModel");
     qmlRegisterType<OrnCommentsModel>     (uri, 1, 0, "OrnCommentsModel");
     qmlRegisterType<OrnCategoriesModel>   (uri, 1, 0, "OrnCategoriesModel");
+    qmlRegisterType<OrnBookmarksModel>    (uri, 1, 0, "OrnBookmarksModel");
 
     qRegisterMetaType<OrnZypp::AppList>("AppList");
 }

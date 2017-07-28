@@ -1,19 +1,18 @@
 #ifndef ORNAPIREQUEST_H
 #define ORNAPIREQUEST_H
 
-#include <QNetworkAccessManager>
+#include <QObject>
+
+class QNetworkReply;
+class QNetworkRequest;
 
 class OrnApiRequest : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QNetworkAccessManager* networkManager READ networkManager WRITE setNetworkManager NOTIFY networkManagerChanged)
 
 public:
     explicit OrnApiRequest(QObject *parent = 0);
     ~OrnApiRequest();
-
-    QNetworkAccessManager *networkManager() const;
-    void setNetworkManager(QNetworkAccessManager *networkManager);
 
     void run(const QNetworkRequest &request);
 
@@ -24,14 +23,12 @@ public slots:
     void reset();
 
 signals:
-    void networkManagerChanged();
     void jsonReady(const QJsonDocument &jsonDoc);
 
 protected slots:
     void onReplyFinished();
 
 protected:
-    QNetworkAccessManager *mNetworkManager;
     QNetworkReply *mNetworkReply;
 
 private:

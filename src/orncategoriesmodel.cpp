@@ -40,8 +40,6 @@ QHash<int, QByteArray> OrnCategoriesModel::roleNames() const
 
 void OrnCategoriesModel::onJsonReady(const QJsonDocument &jsonDoc)
 {
-    this->reset();
-    mCanFetchMore = false;
     auto categoriesArray = jsonDoc.array();
     if (categoriesArray.isEmpty())
     {
@@ -59,5 +57,6 @@ void OrnCategoriesModel::onJsonReady(const QJsonDocument &jsonDoc)
     qDebug() << list.size() << "items have been added to the model";
     this->endInsertRows();
     emit this->replyProcessed();
+    mCanFetchMore = false;
 }
 
