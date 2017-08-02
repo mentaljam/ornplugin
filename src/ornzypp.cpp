@@ -21,6 +21,7 @@ const QString OrnZypp::ssuModifyRepo(QStringLiteral("modifyRepo"));
 const QString OrnZypp::ssuAddRepo(QStringLiteral("addRepo"));
 const QString OrnZypp::repoBaseUrl(QStringLiteral("https://sailfish.openrepos.net/%0/personal/main"));
 const QString OrnZypp::repoNamePrefix(QStringLiteral("openrepos-"));
+const QString OrnZypp::installed(QStringLiteral("installed"));
 const int OrnZypp::repoNamePrefixLength = OrnZypp::repoNamePrefix.length();
 OrnZypp *OrnZypp::gInstance = 0;
 
@@ -284,7 +285,7 @@ void OrnZypp::fetchAvailablePackages()
         mAvailablePackages.clear();
     }
 
-    t->getPackages();
+    t->getPackages(PackageKit::Transaction::FilterSupported);
 }
 
 void OrnZypp::fetchInstalledPackages()
@@ -316,7 +317,10 @@ void OrnZypp::onAvailablePackage(PackageKit::Transaction::Info info,
     Q_UNUSED(info)
     Q_UNUSED(summary)
     auto id = packageId.split(QChar(';'));
-    if (id.last().startsWith(repoNamePrefix))
+    auto repo = id.last();
+    // NOTE: It seems there is no way to get a full list of packages available from repos
+    // because the installed one does not have a repo alias in ID
+    if (repo.startsWith(repoNamePrefix) || repo == installed)
     {
         // Add package name to available packages if it's from an ORN repo
         mAvailablePackages.insertMulti(id[0], packageId);

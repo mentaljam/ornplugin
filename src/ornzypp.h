@@ -58,6 +58,7 @@ public:
     static const QString ssuAddRepo;
     static const QString repoBaseUrl;
     static const QString repoNamePrefix;
+    static const QString installed;
     static const int repoNamePrefixLength;
 
 public:

@@ -183,16 +183,15 @@ void OrnApplication::onAvailablePackagesChanged()
         {
             auto idParts = id.split(QChar(';'));
             auto repo = idParts.last();
-            if (mRepoAlias != repo)
+            if (repo == mRepoAlias || repo == OrnZypp::installed)
             {
                 // Install packages only from current repo
-                continue;
-            }
-            auto version = idParts[1];
-            if (OrnVersion(newest) < OrnVersion(version))
-            {
-                newest = version;
-                newestId = id;
+                auto version = idParts[1];
+                if (OrnVersion(newest) < OrnVersion(version))
+                {
+                    newest = version;
+                    newestId = id;
+                }
             }
         }
         if (mAvailableVersion != newest)
