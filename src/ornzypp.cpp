@@ -1,4 +1,5 @@
 #include "ornzypp.h"
+#include "orn.h"
 
 #include <zypp/RepoManager.h>
 #include <zypp/ZYppFactory.h>
@@ -9,67 +10,94 @@
 #include <QLocale>
 #include <QFileInfo>
 
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
-
-#include <QDebug>
-
-#define REPO_BASEURL           QStringLiteral("https://sailfish.openrepos.net/%0/personal/main")
-#define SSU_INTERFACE          QStringLiteral("org.nemo.ssu")
-#define SSU_PATH               QStringLiteral("/org/nemo/ssu")
-#define SSU_METHOD_MODIFYREPO  QStringLiteral("modifyRepo")
-#define SSU_METHOD_ADDREPO     QStringLiteral("addRepo")
 #define SSU_METHOD_DISPLAYNAME QStringLiteral("displayName")
+#define SSU_CONFIG_PATH        QStringLiteral("/etc/ssu/ssu.ini")
+#define SSU_REPOS_GROUP        QStringLiteral("repository-urls")
+#define SSU_DISABLED_KEY       QStringLiteral("disabled-repos")
 
+const QString OrnZypp::ssuInterface(QStringLiteral("org.nemo.ssu"));
+const QString OrnZypp::ssuPath(QStringLiteral("/org/nemo/ssu"));
+const QString OrnZypp::ssuModifyRepo(QStringLiteral("modifyRepo"));
+const QString OrnZypp::ssuAddRepo(QStringLiteral("addRepo"));
+const QString OrnZypp::repoBaseUrl(QStringLiteral("https://sailfish.openrepos.net/%0/personal/main"));
 const QString OrnZypp::repoNamePrefix(QStringLiteral("openrepos-"));
 const int OrnZypp::repoNamePrefixLength = OrnZypp::repoNamePrefix.length();
+OrnZypp *OrnZypp::gInstance = 0;
 
 OrnZypp::OrnZypp(QObject *parent) :
-    QObject(parent)
+    QObject(parent),
+    mBusy(false),
+    mFetchingPackages(false)
 {
+    // Initialize SSU target
     zypp::ZYppFactory::instance().getZYpp()->initializeTarget("/");
+
+    // Refetch available packages if repos have been changed
+    connect(this, &OrnZypp::repoModified, this, &OrnZypp::onRepoModified);
+    // Refetch installed packages if available have been changed
+    connect(this, &OrnZypp::availablePackagesChanged, this, &OrnZypp::fetchInstalledPackages);
+
+    // Fetch repos
+    QtConcurrent::run(this, &OrnZypp::fetchRepos);
+    // Fetch available packages
+    this->fetchAvailablePackages();
 }
 
-bool OrnZypp::hasRepo(QString alias)
+OrnZypp *OrnZypp::instance()
 {
-    if (!alias.startsWith(repoNamePrefix))
+    if (!gInstance)
     {
-        alias.prepend(repoNamePrefix);
+        gInstance = new OrnZypp(qApp);
     }
-    return zypp::RepoManager().hasRepo(alias.toStdString());
+    return gInstance;
 }
 
-bool OrnZypp::repoAction(const QString &author, const RepoAction &action)
+OrnZypp::RepoStatus OrnZypp::repoStatus(const QString &alias) const
 {
-    auto interface = SSU_INTERFACE;
-    bool addRepo = action == AddRepo;
-    auto method = addRepo ? SSU_METHOD_ADDREPO : SSU_METHOD_MODIFYREPO;
-    auto alias = repoNamePrefix + author;
-    auto args = addRepo ? QVariantList{ alias, REPO_BASEURL.arg(author) } :
-                          QVariantList{ action, alias };
-    auto methodCall = QDBusMessage::createMethodCall(
-                interface,
-                SSU_PATH,
-                interface,
-                method);
-    methodCall.setArguments(args);
-    qDebug() << "Calling" << methodCall;
-    auto call = QDBusConnection::systemBus().call(methodCall, QDBus::BlockWithGui, 7000);
-    if (!call.errorName().isEmpty())
+    if (!mRepos.contains(alias))
     {
-        qDebug() << call.errorMessage();
-        return false;
+        return RepoNotInstalled;
     }
-    return true;
+    return mRepos[alias] ? RepoEnabled : RepoDisabled;
+}
+
+OrnZypp::RepoList OrnZypp::repoList() const
+{
+    RepoList repos;
+    for (auto it = mRepos.constBegin(); it != mRepos.constEnd(); ++it)
+    {
+        auto alias = it.key();
+        repos << Repo{ it.value(), alias, alias.mid(repoNamePrefixLength) };
+    }
+    return repos;
+}
+
+bool OrnZypp::isAvailable(const QString &packageName) const
+{
+    return mAvailablePackages.contains(packageName);
+}
+
+QStringList OrnZypp::availablePackages(const QString &packageName) const
+{
+    return mAvailablePackages.values(packageName);
+}
+
+bool OrnZypp::isInstalled(const QString &packageName) const
+{
+    return mInstalledPackages.contains(packageName);
+}
+
+QString OrnZypp::installedPackage(const QString &packageName) const
+{
+    return mInstalledPackages.value(packageName);
 }
 
 QString OrnZypp::deviceModel()
 {
-    auto interface = SSU_INTERFACE;
     auto methodCall = QDBusMessage::createMethodCall(
-                interface,
-                SSU_PATH,
-                interface,
+                ssuInterface,
+                ssuPath,
+                ssuInterface,
                 SSU_METHOD_DISPLAYNAME);
     // Ssu::DeviceModel = 1
     methodCall.setArguments({ 1 });
@@ -78,9 +106,236 @@ QString OrnZypp::deviceModel()
     return call.arguments().first().toString();
 }
 
-void OrnZypp::getInstalledApps()
+bool OrnZypp::getInstalledApps()
 {
+    if (mBusy)
+    {
+        qWarning() << "OrnZypp is already busy";
+        return false;
+    }
+    mBusy = true;
     QtConcurrent::run(this, &OrnZypp::pInstalledApps);
+    return true;
+}
+
+void OrnZypp::addRepo(const QString &author)
+{
+    auto alias = repoNamePrefix + author;
+    pDbusCall(ssuAddRepo, [this, alias]()
+        {
+            qDebug() << "Repo" << alias << "have been added";
+            mRepos.insert(alias, true);
+            emit this->repoModified(alias, AddRepo);
+        },
+        QVariantList{ alias, repoBaseUrl.arg(author) });
+}
+
+void OrnZypp::modifyRepo(const QString &alias, const OrnZypp::RepoAction &action)
+{
+    pDbusCall(ssuModifyRepo, [this, alias, action]()
+        {
+            qDebug() << "Repo" << alias << "have been modified with" << action;
+            switch (action)
+            {
+            case RemoveRepo:
+                mRepos.remove(alias);
+                break;
+            case DisableRepo:
+                mRepos[alias] = false;
+                break;
+            case EnableRepo:
+                mRepos[alias] = true;
+                break;
+            default:
+                break;
+            }
+            emit this->repoModified(alias, action);
+        },
+        QVariantList{ action, alias });
+}
+
+void OrnZypp::enableRepos(bool enable)
+{
+    QStringList repos;
+    QSettings ssuSettings(SSU_CONFIG_PATH, QSettings::IniFormat);
+
+    auto disabled = ssuSettings.value(SSU_DISABLED_KEY).toStringList();
+    if (enable)
+    {
+        repos = disabled;
+    }
+    else
+    {
+        ssuSettings.beginGroup(SSU_REPOS_GROUP);
+        auto enabled = ssuSettings.childKeys();
+        for (const auto &repo : disabled)
+        {
+            enabled.removeOne(repo);
+        }
+        repos = enabled;
+    }
+
+    auto action = enable ? EnableRepo : DisableRepo;
+    for (const auto &repo : repos)
+    {
+        this->modifyRepo(repo, action);
+    }
+}
+
+void OrnZypp::refreshRepos(bool force)
+{
+    auto t = Orn::transaction();
+    qDebug() << "Refreshing repos with" << t << "method refreshCache()";
+    t->refreshCache(force);
+}
+
+void OrnZypp::refreshRepo(const QString &alias, bool force)
+{
+    auto t = Orn::transaction();
+    qDebug() << "Refreshing repo" << alias << "with" << t << "method repoSetData()";
+    t->repoSetData(alias, QStringLiteral("refresh-now"),
+                   force ? QStringLiteral("true") : QStringLiteral("false"));
+}
+
+void OrnZypp::installPackage(const QString &packageId)
+{
+    auto t = Orn::transaction();
+    connect(t, &PackageKit::Transaction::finished, [this, packageId]()
+    {
+        mInstalledPackages.insert(
+                    PackageKit::Transaction::packageName(packageId),
+                    packageId);
+        emit this->installedPackagesChanged();
+        emit this->packageInstalled(packageId);
+    });
+    qDebug() << "Installing package" << packageId << "with" << t << "method installPackage()";
+    t->installPackage(packageId);
+}
+
+void OrnZypp::removePackage(const QString &packageId)
+{
+    auto t = Orn::transaction();
+    connect(t, &PackageKit::Transaction::finished, [this, packageId]()
+    {
+        auto name = PackageKit::Transaction::packageName(packageId);
+        if (mInstalledPackages.remove(name))
+        {
+            emit this->installedPackagesChanged();
+        }
+        emit this->packageRemoved(packageId);
+    });
+    qDebug() << "Removing package" << packageId << "with" << t << "method installPackage()";
+    t->removePackage(packageId);
+}
+
+void OrnZypp::fetchRepos()
+{
+    mRepos.clear();
+    // NOTE: A hack for SSU repos. Can break on ssu config changes.
+    QSettings ssuSettings(SSU_CONFIG_PATH, QSettings::IniFormat);
+    auto disabled = ssuSettings.value(SSU_DISABLED_KEY).toStringList().toSet();
+    ssuSettings.beginGroup(SSU_REPOS_GROUP);
+    auto repos = ssuSettings.childKeys();
+    for (const auto &repo : repos)
+    {
+        if (repo.startsWith(repoNamePrefix))
+        {
+            auto enabled = !disabled.contains(repo);
+            qDebug() << "Found repo { alias:" << repo << ", enabled:" << enabled << "}";
+            mRepos.insert(repo, enabled);
+        }
+    }
+    emit this->reposFetched();
+}
+
+void OrnZypp::onRepoModified(const QString &alias, const RepoAction &action)
+{
+    // TODO: Currently avaliable apps are reloaded on every repo change
+    if (action == AddRepo || action == EnableRepo)
+    {
+        auto t = Orn::transaction();
+        connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::fetchAvailablePackages);
+        qDebug() << "Refreshing repo" << alias << "with" << t << "method repoSetData()";
+        t->repoSetData(alias, QStringLiteral("refresh-now"), QStringLiteral("true"));
+    }
+    else
+    {
+        this->fetchAvailablePackages();
+    }
+}
+
+void OrnZypp::fetchAvailablePackages()
+{
+    // Get available packages and got installed when finished
+    if (mFetchingPackages)
+    {
+        qWarning() << "OrnZypp is already fetching packages";
+        return;
+    }
+    mFetchingPackages = true;
+
+    auto t = Orn::transaction();
+    connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::availablePackagesChanged);
+    connect(t, &PackageKit::Transaction::package, this, &OrnZypp::onAvailablePackage);
+    qDebug() << "Getting all available packages with" << t << "method getPackages()";
+
+    if (!mAvailablePackages.isEmpty())
+    {
+        mAvailablePackages.clear();
+    }
+
+    t->getPackages();
+}
+
+void OrnZypp::fetchInstalledPackages()
+{
+    if (mAvailablePackages.isEmpty())
+    {
+        mFetchingPackages = false;
+        return;
+    }
+
+    auto t = Orn::transaction();
+    connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::installedPackagesChanged);
+    connect(t, &PackageKit::Transaction::finished, [this](){ mFetchingPackages = false; });
+    connect(t, &PackageKit::Transaction::package, this, &OrnZypp::onInstalledPackage);
+    qDebug() << "Getting all installed packages with" << t << "method getPackages(FilterInstalled)";
+
+    if (!mInstalledPackages.isEmpty())
+    {
+        mInstalledPackages.clear();
+    }
+
+    t->getPackages(PackageKit::Transaction::FilterInstalled);
+}
+
+void OrnZypp::onAvailablePackage(PackageKit::Transaction::Info info,
+                                 const QString &packageId,
+                                 const QString &summary)
+{
+    Q_UNUSED(info)
+    Q_UNUSED(summary)
+    auto id = packageId.split(QChar(';'));
+    if (id.last().startsWith(repoNamePrefix))
+    {
+        // Add package name to available packages if it's from an ORN repo
+        mAvailablePackages.insertMulti(id[0], packageId);
+    }
+}
+
+void OrnZypp::onInstalledPackage(PackageKit::Transaction::Info info,
+                                 const QString &packageId,
+                                 const QString &summary)
+{
+    Q_UNUSED(info)
+    Q_UNUSED(summary)
+    auto name = PackageKit::Transaction::packageName(packageId);
+    if (mAvailablePackages.contains(name))
+    {
+        // If an installed package is also among available then
+        // it's can be considered as installed from ORN
+        mInstalledPackages.insert(name, packageId);
+    }
 }
 
 void OrnZypp::pInstalledApps()
@@ -199,4 +454,5 @@ void OrnZypp::pInstalledApps()
     }
 
     emit this->installedAppsReady(apps);
+    mBusy = false;
 }

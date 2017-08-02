@@ -13,7 +13,6 @@ class OrnClient : public OrnApiRequest
     Q_OBJECT
     Q_PROPERTY(bool authorised READ authorised NOTIFY authorisedChanged)
     Q_PROPERTY(bool cookieIsValid READ cookieIsValid NOTIFY cookieIsValidChanged)
-    Q_PROPERTY(QString deviceModel READ deviceModel NOTIFY deviceModelChanged)
     Q_PROPERTY(quint32 userId READ userId NOTIFY authorisedChanged)
     Q_PROPERTY(QString userName READ userName NOTIFY authorisedChanged)
     Q_PROPERTY(QString userIconSource READ userIconSource NOTIFY authorisedChanged)
@@ -25,7 +24,6 @@ public:
 
     bool authorised() const;
     bool cookieIsValid() const;
-    QString deviceModel() const;
     quint32 userId() const;
     QString userName() const;
     QString userIconSource() const;
@@ -43,7 +41,6 @@ public slots:
 
 signals:
     void authorisedChanged();
-    void deviceModelChanged();
     void authorisationError();
     void dayToExpiry();
     void cookieIsValidChanged();

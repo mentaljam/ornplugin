@@ -3,6 +3,7 @@
 
 #include <QObject>
 
+// TODO: add "installed" property
 class OrnAppListItem : public QObject
 {
     friend class OrnAbstractAppsModel;

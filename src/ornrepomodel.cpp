@@ -1,18 +1,19 @@
 #include "ornrepomodel.h"
-#include "orn.h"
-#include "ornzypp.h"
 
-#include <PackageKit/packagekit-qt5/Transaction>
-
-#include <QFile>
-#include <QtConcurrent/QtConcurrent>
+#include <QTimer>
 #include <QDebug>
 
 OrnRepoModel::OrnRepoModel(QObject *parent) :
     QAbstractListModel(parent),
     mEnabledRepos(0)
 {
-    this->reset();
+    auto ornZypp = OrnZypp::instance();
+
+    connect(ornZypp, &OrnZypp::reposFetched, this, &OrnRepoModel::reset);
+    connect(ornZypp, &OrnZypp::repoModified, this, &OrnRepoModel::onRepoModified);
+
+    // Delay reset to ensure that modelReset signal is received in qml
+    QTimer::singleShot(500, this, &OrnRepoModel::reset);
 }
 
 bool OrnRepoModel::hasEnabledRepos() const
@@ -30,116 +31,76 @@ void OrnRepoModel::reset()
     qDebug() << "Resetting model";
     this->beginResetModel();
     mData.clear();
-    this->endResetModel();
-    if (mEnabledRepos != 0)
+
+    auto repos = OrnZypp::instance()->repoList();
+    auto size = repos.size();
+    int enabledRepos = 0;
+    if (size)
     {
-        mEnabledRepos = 0;
-        emit this->enabledReposChanged();
-    }
-    auto t = this->transaction();
-    qDebug() << "Starting transaction" << t->uid() << "method getRepoList()";
-    t->getRepoList();
-}
-
-void OrnRepoModel::enableRepo(const QString &repoId, bool enable)
-{
-    auto t = this->transaction();
-    qDebug() << "Starting transaction" << t->uid() << "method repoEnable()";
-    t->repoEnable(repoId, enable);
-    // Transaction::repoEnable() does not emmit any signal?
-    emit t->repoDetail(repoId, QString(), enable);
-}
-
-void OrnRepoModel::enableRepos(bool enable)
-{
-    QtConcurrent::map(mData, [=](const Repo &repo)
-    {
-        this->enableRepo(repo.id, enable);
-    });
-}
-
-void OrnRepoModel::refreshRepo(const QString &repoId)
-{
-    auto t = this->transaction();
-    qDebug() << "Starting transaction" << t->uid() << "method repoSetData()";
-    t->repoSetData(repoId, QStringLiteral("refresh-now"), QStringLiteral("true"));
-}
-
-void OrnRepoModel::removeRepo(const QString &repoAuthor)
-{
-    auto size = mData.size();
-    for (int i = 0; i < size; ++i)
-    {
-        if (mData[i].author == repoAuthor)
+        mData.append(repos);
+        for (const auto &repo : repos)
         {
-            if (OrnZypp::repoAction(repoAuthor, OrnZypp::RemoveRepo))
-            {
-                this->beginRemoveRows(QModelIndex(), i, i);
-                mData.removeAt(i);
-                this->endRemoveRows();
-                --mEnabledRepos;
-                emit this->enabledReposChanged();
-            }
-            else
-            {
-                qWarning() << "Could not remove repo"
-                           << OrnZypp::repoNamePrefix + repoAuthor;
-                emit this->errorRemoveRepo();
-            }
-            return;
+            enabledRepos += repo.enabled;
         }
     }
-    qWarning() << "Could not find repo" << OrnZypp::repoNamePrefix + repoAuthor
-               << "to remove";
-    emit this->errorRemoveRepo();
+
+    if (mEnabledRepos != enabledRepos)
+    {
+        mEnabledRepos = enabledRepos;
+        emit this->enabledReposChanged();
+    }
+
+    this->endResetModel();
 }
 
-void OrnRepoModel::onRepoUpdated(const QString &repoId, const QString &description, bool enabled)
+void OrnRepoModel::onRepoModified(const QString &alias, const OrnZypp::RepoAction &action)
 {
-    Q_UNUSED(description)
-
-    if (!repoId.startsWith(OrnZypp::repoNamePrefix))
+    if (action == OrnZypp::AddRepo)
     {
-        qDebug() << repoId << "is not an OpenRepos repo";
+        auto row = mData.size();
+        this->beginInsertRows(QModelIndex(), row, row);
+        mData << OrnZypp::Repo{ true, alias, alias.mid(OrnZypp::repoNamePrefixLength) };
+        ++mEnabledRepos;
+        emit this->enabledReposChanged();
+        this->endInsertRows();
         return;
     }
 
-    // Remove "openrepos-" prefix
-    auto author = repoId.mid(OrnZypp::repoNamePrefixLength);
     int row = 0;
-    for (auto &repo: mData)
+    for (auto &repo : mData)
     {
-        if (repo.author == author)
+        if (repo.alias == alias)
         {
-            if (repo.enabled != enabled)
+            switch (action)
             {
-                repo.enabled = enabled;
-                qDebug() << "Updating repo" << repo.id;
-                auto index = this->createIndex(row, 0);
-                emit this->dataChanged(index, index, { RepoEnabledRole });
-                mEnabledRepos += enabled ? 1 : -1;
+            case OrnZypp::RemoveRepo:
+                this->beginRemoveRows(QModelIndex(), row, row);
+                mData.removeAt(row);
+                --mEnabledRepos;
                 emit this->enabledReposChanged();
+                this->endRemoveRows();
+                break;
+            case OrnZypp::DisableRepo:
+            case OrnZypp::EnableRepo:
+                {
+                    bool enable = action == OrnZypp::EnableRepo;
+                    if (repo.enabled != enable)
+                    {
+                        repo.enabled = enable;
+                        auto index = this->createIndex(row, 0);
+                        emit this->dataChanged(index, index, { RepoEnabledRole });
+                        mEnabledRepos += enable ? 1 : -1;
+                        emit this->enabledReposChanged();
+                    }
+                }
+                break;
+            default:
+                break;
             }
-            // Nothing to be done
             return;
         }
         ++row;
     }
-
-    qDebug() << "Appending new repo" << repoId;
-    row = mData.size();
-    this->beginInsertRows(QModelIndex(), row, row);
-    mData << Repo{ enabled, repoId, author };
-    this->endInsertRows();
-    mEnabledRepos += enabled;
-    emit this->enabledReposChanged();
-}
-
-PackageKit::Transaction *OrnRepoModel::transaction() const
-{
-    auto t = Orn::transaction();
-    connect(t, &PackageKit::Transaction::repoDetail, this, &OrnRepoModel::onRepoUpdated);
-    return t;
 }
 
 int OrnRepoModel::rowCount(const QModelIndex &parent) const
@@ -159,8 +120,8 @@ QVariant OrnRepoModel::data(const QModelIndex &index, int role) const
     {
     case RepoAuthorRole:
         return repo.author;
-    case RepoIdRole:
-        return repo.id;
+    case RepoAliasRole:
+        return repo.alias;
     case RepoEnabledRole:
         return repo.enabled;
     case SortRole:
@@ -175,7 +136,7 @@ QHash<int, QByteArray> OrnRepoModel::roleNames() const
 {
     return {
         { RepoAuthorRole,  "repoAuthor"  },
-        { RepoIdRole,      "repoId"      },
+        { RepoAliasRole,   "repoAlias"   },
         { RepoEnabledRole, "repoEnabled" }
     };
 }

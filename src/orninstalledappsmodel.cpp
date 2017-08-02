@@ -19,7 +19,6 @@ void OrnInstalledAppsModel::setZypp(OrnZypp *zypp)
 {
     if (mZypp != zypp)
     {
-        qDebug() << zypp;
         if (mZypp)
         {
             disconnect(mZypp, &OrnZypp::installedAppsReady,

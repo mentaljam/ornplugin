@@ -3,9 +3,7 @@
 
 #include <QAbstractListModel>
 
-namespace PackageKit {
-class Transaction;
-}
+#include "ornzypp.h"
 
 class OrnRepoModel : public QAbstractListModel
 {
@@ -18,7 +16,7 @@ public:
     enum Roles
     {
         RepoAuthorRole = Qt::UserRole + 1,
-        RepoIdRole,
+        RepoAliasRole,
         RepoEnabledRole,
         SortRole
     };
@@ -31,32 +29,16 @@ public:
 
 public slots:
     void reset();
-    void enableRepo(const QString &repoId, bool enable);
-    void enableRepos(bool enable);
-    void refreshRepo(const QString &repoId);
-    void removeRepo(const QString &repoAuthor);
 
 signals:
-    void errorRemoveRepo();
     void enabledReposChanged();
 
 private slots:
-    void onRepoUpdated(const QString &repoId, const QString &description, bool enabled);
+    void onRepoModified(const QString &alias, const OrnZypp::RepoAction &action);
 
 private:
-    PackageKit::Transaction *transaction() const;
-
-private:
-
-    struct Repo
-    {
-        bool enabled;
-        QString id;
-        QString author;
-    };
-
     int mEnabledRepos;
-    QList<Repo> mData;
+    OrnZypp::RepoList mData;
 
     // QAbstractItemModel interface
 public:

@@ -1,6 +1,7 @@
 #include "orn_plugin.h"
 #include "ornapirequest.h"
 #include "ornclient.h"
+#include "ornzypp.h"
 #include "ornapplication.h"
 #include "ornapplistitem.h"
 #include "orncommentlistitem.h"
@@ -15,7 +16,6 @@
 #include "orncommentsmodel.h"
 #include "orncategoriesmodel.h"
 #include "ornbookmarksmodel.h"
-#include "ornzypp.h"
 
 #include <qqml.h>
 #include <QNetworkAccessManager>
@@ -30,6 +30,7 @@ void OrnPlugin::registerTypes(const char *uri)
 
     qmlRegisterType<OrnApiRequest>        (uri, 1, 0, "OrnApiRequest");
     qmlRegisterType<OrnClient>            (uri, 1, 0, "OrnClient");
+    qmlRegisterType<OrnZypp>              (uri, 1, 0, "OrnZypp");
     qmlRegisterType<OrnApplication>       (uri, 1, 0, "OrnApplication");
     qmlRegisterType<OrnAppListItem>       (uri, 1, 0, "OrnAppListItem");
     qmlRegisterType<OrnCommentListItem>   (uri, 1, 0, "OrnCommentListItem");
@@ -46,4 +47,5 @@ void OrnPlugin::registerTypes(const char *uri)
     qmlRegisterType<OrnBookmarksModel>    (uri, 1, 0, "OrnBookmarksModel");
 
     qRegisterMetaType<OrnZypp::AppList>("AppList");
+    qRegisterMetaType<OrnZypp::RepoList>("RepoList");
 }

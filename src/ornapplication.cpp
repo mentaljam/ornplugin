@@ -1,10 +1,7 @@
 #include "ornapplication.h"
 #include "orn.h"
 #include "ornversion.h"
-#include "ornzypp.h"
 #include "orncategorylistitem.h"
-
-#include <PackageKit/packagekit-qt5/Daemon>
 
 #include <QUrl>
 #include <QNetworkRequest>
@@ -12,13 +9,14 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QFileInfo>
 
 #include <QDebug>
 
 OrnApplication::OrnApplication(QObject *parent) :
     OrnApiRequest(parent),
     mUpdateAvailable(false),
-    mRepoStatus(RepoNotInstalled),
+    mRepoStatus(OrnZypp::RepoNotInstalled),
     mAppId(0),
     mUserId(0),
     mRatingCount(0),
@@ -26,9 +24,13 @@ OrnApplication::OrnApplication(QObject *parent) :
     mRating(0.0)
 {
     connect(this, &OrnApplication::jsonReady, this, &OrnApplication::onJsonReady);
-    connect(PackageKit::Daemon::global(), &PackageKit::Daemon::repoListChanged,
-            this, &OrnApplication::onRepoListChanged);
-    connect(this, &OrnApplication::repoStatusChanged, this, &OrnApplication::onRepoStatusChanged);
+
+    auto ornZypp = OrnZypp::instance();
+    connect(ornZypp, &OrnZypp::reposFetched, this, &OrnApplication::onReposChanged);
+    connect(ornZypp, &OrnZypp::repoModified, this, &OrnApplication::onReposChanged);
+    connect(ornZypp, &OrnZypp::availablePackagesChanged, this, &OrnApplication::onAvailablePackagesChanged);
+    connect(ornZypp, &OrnZypp::installedPackagesChanged, this, &OrnApplication::onInstalledPackagesChanged);
+
     connect(this, &OrnApplication::installedVersionChanged, this, &OrnApplication::checkUpdates);
     connect(this, &OrnApplication::availableVersionChanged, this, &OrnApplication::checkUpdates);
 }
@@ -60,65 +62,20 @@ void OrnApplication::update()
     this->run(request);
 }
 
-void OrnApplication::enableRepo()
-{
-    Q_ASSERT_X(!mRepoId.isEmpty(), Q_FUNC_INFO, "Repo ID is empty. Run setAppId() and then update()");
-    if (mRepoStatus == RepoNotInstalled)
-    {
-        if (OrnZypp::repoAction(mUserName, OrnZypp::AddRepo))
-        {
-            qDebug() << "Installed repo" << mRepoId;
-            mRepoStatus = RepoEnabled;
-            emit this->repoStatusChanged();
-        }
-        else
-        {
-            qWarning() << "Could not install repo" << mRepoId;
-            emit this->errorInstallRepo();
-        }
-    }
-    else if (mRepoStatus == RepoDisabled)
-    {
-        auto t = Orn::transaction();
-        connect(t, &PackageKit::Transaction::finished, [=]()
-        {
-            qDebug() << "Starting transaction" << t->uid() << "method checkRepoUpdate()";
-            this->checkRepoUpdate(mRepoId, QString(), true);
-        });
-        qDebug() << "Starting transaction" << t->uid() << "method repoEnable()";
-        t->repoEnable(mRepoId, true);
-    }
-    else
-    {
-        qDebug() << "Repository is already enabled";
-    }
-}
-
 void OrnApplication::install()
 {
-    auto t = Orn::transaction();
-    connect(t, &PackageKit::Transaction::finished, [=]()
+    if (!mAvailablePackageId.isEmpty())
     {
-        this->onInstalled(mAvailablePackageId, mAvailableVersion);
-    });
-    qDebug() << "Installing" << mPackageName << "by starting transaction"
-             << t->uid() << "method installPackage()";
-    t->installPackage(mAvailablePackageId);
+        OrnZypp::instance()->installPackage(mAvailablePackageId);
+    }
 }
 
 void OrnApplication::remove()
 {
-    auto t = Orn::transaction();
-    connect(t, &PackageKit::Transaction::package, [=]()
+    if (!mInstalledPackageId.isEmpty())
     {
-        qDebug() << "Package" << mInstalledPackageId << "was removed";
-        mInstalledPackageId.clear();
-        mInstalledVersion.clear();
-        emit this->installedVersionChanged();
-    });
-    qDebug() << "Removing" << mPackageName << "by starting transaction"
-             << t->uid() << "method removePackage()";
-    t->removePackage(mInstalledPackageId);
+        OrnZypp::instance()->removePackage(mAvailablePackageId);
+    }
 }
 
 void OrnApplication::launch()
@@ -130,127 +87,6 @@ void OrnApplication::launch()
     }
     qDebug() << "Launching" << mDesktopFile;
     QDesktopServices::openUrl(QUrl::fromLocalFile(mDesktopFile));
-}
-
-void OrnApplication::onRepoListChanged()
-{
-    auto t = Orn::transaction();
-    connect(t, &PackageKit::Transaction::repoDetail, this, &OrnApplication::checkRepoUpdate);
-    qDebug() << "Repositories list has been changed. Starting transaction" << t->uid()
-             << "method getRepoList() to check for application"
-             << mPackageName << "repository" << mRepoId << "changes.";
-    t->getRepoList();
-}
-
-void OrnApplication::checkAppPackage(const PackageKit::Transaction::Filter &filter)
-{
-    auto t = Orn::transaction();
-    connect(t, &PackageKit::Transaction::package, this, &OrnApplication::onPackage);
-    qDebug() << "Resolving package" << mPackageName
-             << PackageKit::Daemon::enumToString<PackageKit::Transaction>(filter, "Filter")
-             << "packages by starting transaction" << t->uid() << "method resolve()";
-    t->resolve(mPackageName, filter);
-}
-
-void OrnApplication::onRepoStatusChanged()
-{
-    if (mRepoStatus != RepoEnabled)
-    {
-        return;
-    }
-    auto t = Orn::transaction();
-    connect(t, &PackageKit::Transaction::finished, [=](PackageKit::Transaction::Exit status, uint runtime)
-    {
-        // Get available package versions after repository refresh
-        Q_UNUSED(runtime)
-        if (status == PackageKit::Transaction::ExitSuccess)
-        {
-            this->checkAppPackage(PackageKit::Transaction::FilterNotInstalled);
-        }
-    });
-    qDebug() << "Refreshing" << mRepoId << "by starting transaction"
-             << t->uid() << "method repoSetData()";
-    t->repoSetData(mRepoId, QStringLiteral("refresh-now"), QStringLiteral("false"));
-}
-
-void OrnApplication::checkRepoUpdate(const QString &repoId, const QString &description, bool enabled)
-{
-    Q_UNUSED(description)
-    if (mRepoId != repoId)
-    {
-        return;
-    }
-    // NOTE: will this work for removed repos?
-    auto status = OrnZypp::hasRepo(repoId) ? RepoDisabled : RepoNotInstalled;
-    if (enabled)
-    {
-        status = RepoEnabled;
-    }
-    if (mRepoStatus != status)
-    {
-        mRepoStatus = status;
-        qDebug() << "Application" << mPackageName << "repository status:" << status;
-        emit this->repoStatusChanged();
-    }
-}
-
-void OrnApplication::onPackage(PackageKit::Transaction::Info info, const QString &packageID, const QString &summary)
-{
-    Q_UNUSED(summary)
-    auto idParts = packageID.split(QChar(';'));
-    if (idParts[0] != mPackageName)
-    {
-        return;
-    }
-
-    auto version = idParts[1];
-
-    switch (info)
-    {
-    case PackageKit::Transaction::InfoInstalled:
-        this->onInstalled(packageID, version);
-        break;
-    case PackageKit::Transaction::InfoAvailable:
-        if (OrnVersion(mAvailableVersion) < OrnVersion(version))
-        {
-            mAvailablePackageId = packageID;
-            mAvailableVersion = version;
-            emit this->availableVersionChanged();
-        }
-        break;
-    default:
-        break;
-    }
-}
-
-void OrnApplication::onInstalled(const QString &packageId, const QString &version)
-{
-    if (mInstalledPackageId == packageId)
-    {
-        qWarning() << "It looks like a package with such id is already installed" << packageId;
-        return;
-    }
-    qDebug() << "Package" << packageId << "is installed";
-    mInstalledPackageId = packageId;
-    mInstalledVersion = version;
-    emit this->installedVersionChanged();
-    auto desktopFiles = PackageKit::Transaction::packageDesktopFiles(mPackageName);
-    if (!desktopFiles.isEmpty() && mDesktopFile != desktopFiles[0])
-    {
-        mDesktopFile = desktopFiles[0];
-        emit this->canBeLaunchedChanged();
-    }
-}
-
-void OrnApplication::checkUpdates()
-{
-    auto updateAvailable = mInstalledVersion.isEmpty() ? false :
-        OrnVersion(mInstalledVersion) < OrnVersion(mAvailableVersion);
-    if (mUpdateAvailable != updateAvailable)
-    {
-        mUpdateAvailable = updateAvailable;
-        emit this->updateAvailableChanged();
-    }
 }
 
 void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
@@ -299,17 +135,170 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     if (!mUserName.isEmpty())
     {
         // Generate repository name
-        mRepoId = OrnZypp::repoNamePrefix + mUserName;
+        mRepoAlias = OrnZypp::repoNamePrefix + mUserName;
         // Check if repository is enabled
-        this->onRepoListChanged();
-        // Check if application is installed
-        this->checkAppPackage(PackageKit::Transaction::FilterInstalled);
+        this->onReposChanged();
     }
     else
     {
-        mRepoId.clear();
+        mRepoAlias.clear();
     }
 
     qDebug() << "Application" << mPackageName << "information updated";
     emit this->updated();
+}
+
+void OrnApplication::onReposChanged()
+{
+    if (mRepoAlias.isEmpty())
+    {
+        return;
+    }
+
+    auto repoStatus = OrnZypp::instance()->repoStatus(mRepoAlias);
+    if (mRepoStatus != repoStatus)
+    {
+        qDebug() << mPackageName << "repo" << mRepoAlias << "status is" << repoStatus;
+        mRepoStatus = repoStatus;
+        emit this->repoStatusChanged();
+        this->onAvailablePackagesChanged();
+        this->onInstalledPackagesChanged();
+    }
+}
+
+void OrnApplication::onAvailablePackagesChanged()
+{
+    if (mPackageName.isEmpty() || mRepoAlias.isEmpty())
+    {
+        return;
+    }
+
+    auto ornZypp = OrnZypp::instance();
+    if (ornZypp->isAvailable(mPackageName))
+    {
+        auto ids = ornZypp->availablePackages(mPackageName);
+        auto newest = mAvailableVersion;
+        QString newestId;
+        for (const auto &id : ids)
+        {
+            auto idParts = id.split(QChar(';'));
+            auto repo = idParts.last();
+            if (mRepoAlias != repo)
+            {
+                // Install packages only from current repo
+                continue;
+            }
+            auto version = idParts[1];
+            if (OrnVersion(newest) < OrnVersion(version))
+            {
+                newest = version;
+                newestId = id;
+            }
+        }
+        if (mAvailableVersion != newest)
+        {
+            mAvailableVersion = newest;
+            mAvailablePackageId = newestId;
+            emit this->availableVersionChanged();
+        }
+    }
+    else if (!mAvailableVersion.isEmpty())
+    {
+        mAvailableVersion.clear();
+        mAvailablePackageId.clear();
+        emit this->availableVersionChanged();
+        emit this->appNotFound();
+    }
+}
+
+void OrnApplication::onInstalledPackagesChanged()
+{
+    if (mPackageName.isEmpty())
+    {
+        return;
+    }
+
+    auto ornZypp = OrnZypp::instance();
+    if (ornZypp->isInstalled(mPackageName))
+    {
+        auto id = ornZypp->installedPackage(mPackageName);
+        auto version = PackageKit::Transaction::packageVersion(id);
+        if (mInstalledVersion != version)
+        {
+            mInstalledVersion = version;
+            mInstalledPackageId = id;
+            emit this->installedVersionChanged();
+        }
+    }
+    else if (!mInstalledVersion.isEmpty())
+    {
+        mInstalledVersion.clear();
+        mInstalledPackageId.clear();
+        emit this->installedVersionChanged();
+    }
+    this->checkDesktopFile();
+}
+
+void OrnApplication::checkUpdates()
+{
+    auto updateAvailable = mInstalledVersion.isEmpty() ? false :
+        OrnVersion(mInstalledVersion) < OrnVersion(mAvailableVersion);
+    if (mUpdateAvailable != updateAvailable)
+    {
+        mUpdateAvailable = updateAvailable;
+        emit this->updateAvailableChanged();
+    }
+}
+
+void OrnApplication::onPackageInstalled(const QString &packageId)
+{
+    auto idParts = packageId.split(QChar(';'));
+    if (idParts.first() == mPackageName)
+    {
+        mInstalledPackageId = packageId;
+        mInstalledVersion = idParts[1];
+        emit this->installedVersionChanged();
+        this->checkDesktopFile();
+        emit this->installed();
+    }
+}
+
+void OrnApplication::onPackageRemoved(const QString &packageId)
+{
+    auto name = PackageKit::Transaction::packageName(packageId);
+    if (name == mPackageName)
+    {
+        mInstalledPackageId.clear();
+        mInstalledVersion.clear();
+        emit this->installedVersionChanged();
+        this->checkDesktopFile();
+        emit this->removed();
+    }
+}
+
+void OrnApplication::checkDesktopFile()
+{
+    auto desktopFile = mDesktopFile;
+    if (mPackageName.isEmpty() || mInstalledPackageId.isEmpty())
+    {
+        desktopFile.clear();
+    }
+    else
+    {
+        auto desktopFiles = PackageKit::Transaction::packageDesktopFiles(mPackageName);
+        for (const auto &file : desktopFiles)
+        {
+            if (QFileInfo(file).isFile())
+            {
+                desktopFile = file;
+                break;
+            }
+        }
+    }
+    if (mDesktopFile != desktopFile)
+    {
+        qDebug() << "Using desktop file" << desktopFile;
+        mDesktopFile = desktopFile;
+        emit this->canBeLaunchedChanged();
+    }
 }

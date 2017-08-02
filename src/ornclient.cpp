@@ -1,6 +1,5 @@
 #include "ornclient.h"
 #include "orn.h"
-#include "ornzypp.h"
 
 #include <QSettings>
 #include <QTimer>
@@ -17,7 +16,6 @@
 #include <QGuiApplication>
 #include <QDebug>
 
-#define DEVICE_MODEL        QStringLiteral("device")
 #define USER_COOKIE         QStringLiteral("user/cookie")
 #define USER_COOKIE_EXPIRE  QStringLiteral("user/cookie/expire")
 #define USER_TOKEN          QStringLiteral("user/token")
@@ -37,15 +35,6 @@ OrnClient::OrnClient(QObject *parent) :
     mSettings(new QSettings(this)),
     mCookieTimer(new QTimer(this))
 {
-    // Get device model
-    QString deviceKey(DEVICE_MODEL);
-    if (!mSettings->contains(deviceKey))
-    {
-        mSettings->setValue(deviceKey, OrnZypp::deviceModel());
-        emit this->deviceModelChanged();
-    }
-    qDebug() << "Device model is" << this->deviceModel();
-
     // Configure cookie timer
     mCookieTimer->setSingleShot(true);
     this->setCookieTimer();
@@ -59,7 +48,7 @@ OrnClient::OrnClient(QObject *parent) :
         mNetworkReply = ornNetworkAccessManager->get(request);
         connect(mNetworkReply, &QNetworkReply::finished, [=]()
         {
-#ifndef NDEBUG
+#ifdef QT_DEBUG
             if (this->processReply().object().contains(QStringLiteral("token")))
             {
                 qDebug() << "Client is authorised";
@@ -127,11 +116,6 @@ bool OrnClient::cookieIsValid() const
     QString cookieExpireKey(USER_COOKIE_EXPIRE);
     return mSettings->contains(cookieExpireKey) &&
            mSettings->value(cookieExpireKey).toDateTime() > QDateTime::currentDateTime();
-}
-
-QString OrnClient::deviceModel() const
-{
-    return mSettings->value(DEVICE_MODEL).toString();
 }
 
 quint32 OrnClient::userId() const

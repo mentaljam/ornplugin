@@ -12,7 +12,7 @@ public:
 
 public:
     // Why QSortFilterProxyModel has no sort slot?
-    Q_INVOKABLE void sort(Qt::SortOrder order);
+    Q_INVOKABLE void sort(Qt::SortOrder order = Qt::AscendingOrder);
 };
 
 #endif // ORNPROXYMODEL_H
