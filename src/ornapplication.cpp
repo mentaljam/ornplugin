@@ -30,6 +30,8 @@ OrnApplication::OrnApplication(QObject *parent) :
     connect(ornZypp, &OrnZypp::repoModified, this, &OrnApplication::onReposChanged);
     connect(ornZypp, &OrnZypp::availablePackagesChanged, this, &OrnApplication::onAvailablePackagesChanged);
     connect(ornZypp, &OrnZypp::installedPackagesChanged, this, &OrnApplication::onInstalledPackagesChanged);
+    connect(ornZypp, &OrnZypp::packageInstalled, this, &OrnApplication::onPackageInstalled);
+    connect(ornZypp, &OrnZypp::packageRemoved, this, &OrnApplication::onPackageRemoved);
 
     connect(this, &OrnApplication::installedVersionChanged, this, &OrnApplication::checkUpdates);
     connect(this, &OrnApplication::availableVersionChanged, this, &OrnApplication::checkUpdates);
@@ -251,26 +253,16 @@ void OrnApplication::checkUpdates()
 
 void OrnApplication::onPackageInstalled(const QString &packageId)
 {
-    auto idParts = packageId.split(QChar(';'));
-    if (idParts.first() == mPackageName)
+    if (PackageKit::Transaction::packageName(packageId) == mPackageName)
     {
-        mInstalledPackageId = packageId;
-        mInstalledVersion = idParts[1];
-        emit this->installedVersionChanged();
-        this->checkDesktopFile();
         emit this->installed();
     }
 }
 
 void OrnApplication::onPackageRemoved(const QString &packageId)
 {
-    auto name = PackageKit::Transaction::packageName(packageId);
-    if (name == mPackageName)
+    if (PackageKit::Transaction::packageName(packageId) == mPackageName)
     {
-        mInstalledPackageId.clear();
-        mInstalledVersion.clear();
-        emit this->installedVersionChanged();
-        this->checkDesktopFile();
         emit this->removed();
     }
 }

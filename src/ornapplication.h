@@ -71,6 +71,7 @@ private slots:
     void onAvailablePackagesChanged();
     void onInstalledPackagesChanged();
     void checkUpdates();
+    // This two slots need only for emitting signals
     void onPackageInstalled(const QString &packageId);
     void onPackageRemoved(const QString &packageId);
 
