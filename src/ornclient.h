@@ -57,6 +57,7 @@ private slots:
 private:
     QNetworkRequest authorisedRequest();
     QJsonDocument processReply();
+    static void prepareComment(QJsonObject &object, const QString &body);
 
 private:
     QSettings *mSettings;

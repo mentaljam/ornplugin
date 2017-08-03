@@ -201,21 +201,15 @@ void OrnClient::comment(const quint32 &appId, const QString &body, const quint32
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("comments")));
 
     QJsonObject commentObject;
+    OrnClient::prepareComment(commentObject, body);
     commentObject.insert(QStringLiteral("appid"), QString::number(appId));
     if (parentId != 0)
     {
         commentObject.insert(QStringLiteral("pid"), QString::number(parentId));
     }
-    QJsonObject bodyObject;
-    bodyObject.insert(QStringLiteral("value"), body);
-    QJsonArray undArray;
-    undArray.append(bodyObject);
-    QJsonObject undObject;
-    undObject.insert(QStringLiteral("und"), undArray);
-    commentObject.insert(QStringLiteral("comment_body"), undObject);
-    QJsonDocument jsonDoc(commentObject);
 
-    mNetworkReply = ornNetworkAccessManager->post(request, jsonDoc.toJson());
+    mNetworkReply = ornNetworkAccessManager->post(
+                request, QJsonDocument(commentObject).toJson());
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onNewComment);
 }
 
@@ -224,17 +218,11 @@ void OrnClient::editComment(const quint32 &commentId, const QString &body)
     auto request = this->authorisedRequest();
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("comments/%0").arg(commentId)));
 
-    QJsonObject bodyObject;
-    bodyObject.insert(QStringLiteral("value"), body);
-    QJsonArray undArray;
-    undArray.append(bodyObject);
-    QJsonObject undObject;
-    undObject.insert(QStringLiteral("und"), undArray);
     QJsonObject commentObject;
-    commentObject.insert(QStringLiteral("comment_body"), undObject);
-    QJsonDocument jsonDoc(commentObject);
+    OrnClient::prepareComment(commentObject, body);
 
-    mNetworkReply = ornNetworkAccessManager->put(request, jsonDoc.toJson());
+    mNetworkReply = ornNetworkAccessManager->put(
+                request, QJsonDocument(commentObject).toJson());
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onCommentEdited);
 }
 
@@ -368,4 +356,17 @@ QJsonDocument OrnClient::processReply()
     }
 
     return jsonDoc;
+}
+
+void OrnClient::prepareComment(QJsonObject &object, const QString &body)
+{
+    QJsonObject bodyObject;
+    bodyObject.insert(QStringLiteral("value"), body);
+    bodyObject.insert(QStringLiteral("format"), QStringLiteral("filtered_html"));
+    QJsonArray undArray;
+    undArray.append(bodyObject);
+    QJsonObject undObject;
+    undObject.insert(QStringLiteral("und"), undArray);
+
+    object.insert(QStringLiteral("comment_body"), undObject);
 }
