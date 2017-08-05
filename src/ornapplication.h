@@ -32,9 +32,9 @@ class OrnApplication : public OrnApiRequest
     Q_PROPERTY(QString packageName MEMBER mPackageName NOTIFY updated)
     Q_PROPERTY(QString body MEMBER mBody NOTIFY updated)
     Q_PROPERTY(QString changelog MEMBER mChangelog NOTIFY updated)
-    Q_PROPERTY(QString category MEMBER mCategory NOTIFY updated)
     Q_PROPERTY(QDateTime created MEMBER mCreated NOTIFY updated)
     Q_PROPERTY(QDateTime updated MEMBER mUpdated NOTIFY updated)
+    Q_PROPERTY(QVariantList categories MEMBER mCategories NOTIFY updated)
     Q_PROPERTY(QVariantList screenshots MEMBER mScreenshots NOTIFY updated)
 
 public:
@@ -104,11 +104,12 @@ private:
     QString mPackageName;
     QString mBody;
     QString mChangelog;
-    QString mCategory;
     QDateTime mCreated;
-    QDateTime mUpdated;    
-    QList<quint32> mTagsIds;
-    QList<quint32> mCategoryIds;
+    QDateTime mUpdated;
+    /// A list of maps with keys [ id, name ]
+//    IdNameList mTags;
+    /// A list of maps with keys [ id, name ]
+    QVariantList mCategories;
     /// A list of maps with keys [ url, thumb ]
     QVariantList mScreenshots;
 };
