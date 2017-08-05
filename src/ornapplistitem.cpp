@@ -31,15 +31,6 @@ OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject, QObject *parent) :
     auto categories = jsonObject[QStringLiteral("category")].toArray();
     auto tid = Orn::toUint(categories.last().toObject()[QStringLiteral("tid")]);
     mCategory = OrnCategoryListItem::categoryName(tid);
-//    auto categories = jsonObject[QStringLiteral("category")].toArray();
-//    QString tidKey(QStringLiteral("tid"));
-//    QStringList list;
-//    for (const QJsonValue &c: categories)
-//    {
-//        auto tid = Orn::toUint(c.toObject()[tidKey]);
-//        list << qtTrId(Orn::categories[tid]);
-//    }
-//    mCategories = list.join(QByteArrayLiteral(" • "));
 }
 
 QString OrnAppListItem::sinceLabel(const quint32 &value)
