@@ -56,6 +56,12 @@ bool OrnApplication::canBeLaunched() const
     return !mDesktopFile.isEmpty();
 }
 
+QString OrnApplication::category() const
+{
+    return mCategories.empty() ? QString() :
+                mCategories.last().toMap().value("name").toString();
+}
+
 void OrnApplication::update()
 {
     auto url = OrnApiRequest::apiUrl(QStringLiteral("apps/%0").arg(mAppId));

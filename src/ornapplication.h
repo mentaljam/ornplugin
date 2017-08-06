@@ -32,6 +32,7 @@ class OrnApplication : public OrnApiRequest
     Q_PROPERTY(QString packageName MEMBER mPackageName NOTIFY updated)
     Q_PROPERTY(QString body MEMBER mBody NOTIFY updated)
     Q_PROPERTY(QString changelog MEMBER mChangelog NOTIFY updated)
+    Q_PROPERTY(QString category READ category NOTIFY updated)
     Q_PROPERTY(QDateTime created MEMBER mCreated NOTIFY updated)
     Q_PROPERTY(QDateTime updated MEMBER mUpdated NOTIFY updated)
     Q_PROPERTY(QVariantList categories MEMBER mCategories NOTIFY updated)
@@ -44,6 +45,8 @@ public:
     void setAppId(const quint32 &appId);
 
     bool canBeLaunched() const;
+
+    QString category() const;
 
 signals:
     void appIdChanged();
