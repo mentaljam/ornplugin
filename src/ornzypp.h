@@ -71,8 +71,12 @@ public:
 
     bool isAvailable(const QString &packageName) const;
     QStringList availablePackages(const QString &packageName) const;
+
     bool isInstalled(const QString &packageName) const;
     QString installedPackage(const QString &packageName) const;
+
+    bool hasUpdate(const QString &packageName) const;
+    QString updatePackage(const QString &packageName) const;
 
     Q_INVOKABLE static QString deviceModel();    
 
@@ -83,6 +87,7 @@ signals:
 
     void availablePackagesChanged();
     void installedPackagesChanged();
+    void updatesChanged();
 
     void packageInstalled(const QString &packageId);
     void packageRemoved(const QString &packageId);
@@ -97,6 +102,11 @@ public slots:
     void refreshRepos(bool force = false);
     void refreshRepo(const QString &alias, bool force = false);
 
+    void getAvailablePackages();
+    void getInstalledPackages();
+    void getUpdates();
+    void getAllPackages();
+
     void installPackage(const QString &packageId);
     // TODO: an option to autoRemove?
     void removePackage(const QString &packageId);
@@ -104,16 +114,13 @@ public slots:
 private slots:
     void fetchRepos();
     void onRepoModified(const QString &alias, const RepoAction &action);
-    void fetchAvailablePackages();
-    void fetchInstalledPackages();
-    void onAvailablePackage(PackageKit::Transaction::Info info,
-                            const QString &packageId,
-                            const QString &summary);
-    void onInstalledPackage(PackageKit::Transaction::Info info,
-                            const QString &packageId,
-                            const QString &summary);
+    void onPackage(PackageKit::Transaction::Info info,
+                   const QString &packageId,
+                   const QString &summary);
 
 private:
+    void prepareFetching(PackageKit::Transaction *&transaction);
+
     void pInstalledApps();
 
     template<typename Func>
@@ -128,7 +135,7 @@ private:
         qDebug() << "Calling" << call;
         auto pCall = QDBusConnection::systemBus().asyncCall(call);
         auto watcher = new QDBusPendingCallWatcher(pCall, this);
-        connect(watcher, &QDBusPendingCallWatcher::finished, this, returnMethod);
+        connect(watcher, &QDBusPendingCallWatcher::finished, returnMethod);
         connect(watcher, &QDBusPendingCallWatcher::finished,
 #ifdef QT_DEBUG
                 [this, watcher]()
@@ -138,6 +145,7 @@ private:
                         auto e = watcher->error();
                         qCritical() << e.name() << e.message();
                     }
+                    watcher->deleteLater();
                 }
 #else
                 watcher, &QDBusPendingCallWatcher::deleteLater
@@ -147,13 +155,16 @@ private:
 
 private:
     bool mBusy;
-    // TODO: restart fetching operation instead of refusing
-    bool mFetchingPackages;
+    PackageKit::Transaction *mAvailableFetcher;
+    PackageKit::Transaction *mInstalledFetcher;
+    PackageKit::Transaction *mUpdatesFetcher;
     /// { alias, enabled }
     QHash<QString, bool> mRepos;
     /// { name, package_id }
     QHash<QString, QString> mInstalledPackages;
-    /// { name, package_id_list }
+    /// { name, package_id }
+    QHash<QString, QString> mUpdates;
+    /// It's really a multihash { name, package_id_list }
     QMultiHash<QString, QString> mAvailablePackages;
 
     static OrnZypp *gInstance;

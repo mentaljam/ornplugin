@@ -1,6 +1,8 @@
 #include "ornzypp.h"
 #include "orn.h"
 
+#include <PackageKit/packagekit-qt5/Daemon>
+
 #include <zypp/RepoManager.h>
 #include <zypp/ZYppFactory.h>
 #include <zypp/target/rpm/RpmDb.h>
@@ -28,20 +30,20 @@ OrnZypp *OrnZypp::gInstance = 0;
 OrnZypp::OrnZypp(QObject *parent) :
     QObject(parent),
     mBusy(false),
-    mFetchingPackages(false)
+    mAvailableFetcher(0),
+    mInstalledFetcher(0),
+    mUpdatesFetcher(0)
 {
     // Initialize SSU target
     zypp::ZYppFactory::instance().getZYpp()->initializeTarget("/");
 
     // Refetch available packages if repos have been changed
     connect(this, &OrnZypp::repoModified, this, &OrnZypp::onRepoModified);
-    // Refetch installed packages if available have been changed
-    connect(this, &OrnZypp::availablePackagesChanged, this, &OrnZypp::fetchInstalledPackages);
 
     // Fetch repos
     QtConcurrent::run(this, &OrnZypp::fetchRepos);
-    // Fetch available packages
-    this->fetchAvailablePackages();
+    // Fetch packages
+    this->getAllPackages();
 }
 
 OrnZypp *OrnZypp::instance()
@@ -80,7 +82,14 @@ bool OrnZypp::isAvailable(const QString &packageName) const
 
 QStringList OrnZypp::availablePackages(const QString &packageName) const
 {
-    return mAvailablePackages.values(packageName);
+    auto available = mAvailablePackages.values(packageName);
+    // Append also an installed package
+    auto installed = this->installedPackage(packageName);
+    if (!installed.isEmpty())
+    {
+        available.append(installed);
+    }
+    return available;
 }
 
 bool OrnZypp::isInstalled(const QString &packageName) const
@@ -91,6 +100,16 @@ bool OrnZypp::isInstalled(const QString &packageName) const
 QString OrnZypp::installedPackage(const QString &packageName) const
 {
     return mInstalledPackages.value(packageName);
+}
+
+bool OrnZypp::hasUpdate(const QString &packageName) const
+{
+    return mUpdates.contains(packageName);
+}
+
+QString OrnZypp::updatePackage(const QString &packageName) const
+{
+    return mUpdates.value(packageName);
 }
 
 QString OrnZypp::deviceModel()
@@ -198,6 +217,55 @@ void OrnZypp::refreshRepo(const QString &alias, bool force)
                    force ? QStringLiteral("true") : QStringLiteral("false"));
 }
 
+void OrnZypp::getAvailablePackages()
+{
+    this->prepareFetching(mAvailableFetcher);
+    qDebug() << "Getting all available packages with" << mAvailableFetcher
+             << "method getPackages(FilterSupported)";
+    connect(mAvailableFetcher, &PackageKit::Transaction::finished, [this]
+    {
+        this->mAvailableFetcher = 0;
+        emit this->availablePackagesChanged();
+    });
+    mAvailablePackages.clear();
+    mAvailableFetcher->getPackages(PackageKit::Transaction::FilterSupported);
+}
+
+void OrnZypp::getInstalledPackages()
+{
+    this->prepareFetching(mInstalledFetcher);
+    qDebug() << "Getting all installed packages with" << mInstalledFetcher
+             << "method getPackages(FilterInstalled)";
+    connect(mInstalledFetcher, &PackageKit::Transaction::finished, [this]
+    {
+        this->mInstalledFetcher = 0;
+        emit this->installedPackagesChanged();
+    });
+    mInstalledPackages.clear();
+    mInstalledFetcher->getPackages(PackageKit::Transaction::FilterInstalled);
+}
+
+void OrnZypp::getUpdates()
+{
+    this->prepareFetching(mUpdatesFetcher);
+    qDebug() << "Getting all updates with" << mUpdatesFetcher
+             << "method getUpdates()";
+    connect(mUpdatesFetcher, &PackageKit::Transaction::finished, [this]
+    {
+        this->mUpdatesFetcher = 0;
+        emit this->updatesChanged();
+    });
+    mUpdates.clear();
+    mUpdatesFetcher->getUpdates();
+}
+
+void OrnZypp::getAllPackages()
+{
+    this->getAvailablePackages();
+    this->getInstalledPackages();
+    this->getUpdates();
+}
+
 void OrnZypp::installPackage(const QString &packageId)
 {
     auto t = Orn::transaction();
@@ -255,91 +323,61 @@ void OrnZypp::onRepoModified(const QString &alias, const RepoAction &action)
     if (action == AddRepo || action == EnableRepo)
     {
         auto t = Orn::transaction();
-        connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::fetchAvailablePackages);
+        connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::getAllPackages);
         qDebug() << "Refreshing repo" << alias << "with" << t << "method repoSetData()";
         t->repoSetData(alias, QStringLiteral("refresh-now"), QStringLiteral("true"));
     }
     else
     {
-        this->fetchAvailablePackages();
+        this->getAllPackages();
     }
 }
 
-void OrnZypp::fetchAvailablePackages()
+void OrnZypp::onPackage(PackageKit::Transaction::Info info,
+                        const QString &packageId,
+                        const QString &summary)
 {
-    // Get available packages and got installed when finished
-    if (mFetchingPackages)
-    {
-        qWarning() << "OrnZypp is already fetching packages";
-        return;
-    }
-    mFetchingPackages = true;
-
-    auto t = Orn::transaction();
-    connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::availablePackagesChanged);
-    connect(t, &PackageKit::Transaction::package, this, &OrnZypp::onAvailablePackage);
-    qDebug() << "Getting all available packages with" << t << "method getPackages()";
-
-    if (!mAvailablePackages.isEmpty())
-    {
-        mAvailablePackages.clear();
-    }
-
-    t->getPackages(PackageKit::Transaction::FilterSupported);
-}
-
-void OrnZypp::fetchInstalledPackages()
-{
-    if (mAvailablePackages.isEmpty())
-    {
-        mFetchingPackages = false;
-        return;
-    }
-
-    auto t = Orn::transaction();
-    connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::installedPackagesChanged);
-    connect(t, &PackageKit::Transaction::finished, [this](){ mFetchingPackages = false; });
-    connect(t, &PackageKit::Transaction::package, this, &OrnZypp::onInstalledPackage);
-    qDebug() << "Getting all installed packages with" << t << "method getPackages(FilterInstalled)";
-
-    if (!mInstalledPackages.isEmpty())
-    {
-        mInstalledPackages.clear();
-    }
-
-    t->getPackages(PackageKit::Transaction::FilterInstalled);
-}
-
-void OrnZypp::onAvailablePackage(PackageKit::Transaction::Info info,
-                                 const QString &packageId,
-                                 const QString &summary)
-{
-    Q_UNUSED(info)
     Q_UNUSED(summary)
-    auto id = packageId.split(QChar(';'));
-    auto repo = id.last();
-    // NOTE: It seems there is no way to get a full list of packages available from repos
-    // because the installed one does not have a repo alias in ID
-    if (repo.startsWith(repoNamePrefix) || repo == installed)
+    auto idParts = packageId.split(QChar(';'));
+    auto name = idParts.first();
+    auto repo = idParts.last();
+    // Installed packages don't contain repo in ID so
+    // add all installed packages to lists
+    switch (info)
     {
-        // Add package name to available packages if it's from an ORN repo
-        mAvailablePackages.insertMulti(id[0], packageId);
-    }
-}
-
-void OrnZypp::onInstalledPackage(PackageKit::Transaction::Info info,
-                                 const QString &packageId,
-                                 const QString &summary)
-{
-    Q_UNUSED(info)
-    Q_UNUSED(summary)
-    auto name = PackageKit::Transaction::packageName(packageId);
-    if (mAvailablePackages.contains(name))
-    {
-        // If an installed package is also among available then
-        // it's can be considered as installed from ORN
+    case PackageKit::Transaction::InfoInstalled:
         mInstalledPackages.insert(name, packageId);
+        break;
+    case PackageKit::Transaction::InfoAvailable:
+        if (repo.startsWith(repoNamePrefix) || repo == installed)
+        {
+            // Add package name to available packages if
+            // it's from an ORN repo or is installed
+            mAvailablePackages.insertMulti(name, packageId);
+        }
+        break;
+    case PackageKit::Transaction::InfoEnhancement:
+        if (repo.startsWith(repoNamePrefix))
+        {
+            mUpdates.insert(name, packageId);
+        }
+        break;
+    default:
+        break;
     }
+}
+
+void OrnZypp::prepareFetching(PackageKit::Transaction *&transaction)
+{
+    if (transaction)
+    {
+        qWarning() << "OrnZypp is already fetching packages - canceling";
+        transaction->cancel();
+        transaction->deleteLater();
+        transaction = 0;
+    }
+    transaction = Orn::transaction();
+    connect(transaction, &PackageKit::Transaction::package, this, &OrnZypp::onPackage);
 }
 
 void OrnZypp::pInstalledApps()
@@ -428,7 +466,7 @@ void OrnZypp::pInstalledApps()
                         {
                             qtitle = desktopFile.value(nameKey).toString();
                         }
-                        qDebug() << "Using package name" << qname;
+                        qDebug() << "Using name" << qtitle << "for package" << qname;
                         // Find icon
                         if (desktopFile.contains(iconKey))
                         {
