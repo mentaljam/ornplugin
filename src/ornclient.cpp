@@ -166,6 +166,16 @@ bool OrnClient::removeBookmark(const quint32 &appId)
     return ok;
 }
 
+void OrnClient::setValue(const QString &key, const QVariant &value)
+{
+    mSettings->setValue(key, value);
+}
+
+QVariant OrnClient::value(const QString &key) const
+{
+    return mSettings->value(key);
+}
+
 void OrnClient::login(const QString &username, const QString &password)
 {
     // Stop timer and remove old credentials

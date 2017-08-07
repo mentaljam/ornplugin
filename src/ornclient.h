@@ -4,6 +4,7 @@
 #include "ornapirequest.h"
 
 #include <QSet>
+#include <QVariant>
 
 class QSettings;
 class QTimer;
@@ -32,6 +33,9 @@ public:
     Q_INVOKABLE bool hasBookmark(const quint32 &appId) const;
     Q_INVOKABLE bool addBookmark(const quint32 &appId);
     Q_INVOKABLE bool removeBookmark(const quint32 &appId);
+
+    Q_INVOKABLE void setValue(const QString &key, const QVariant &value);
+    Q_INVOKABLE QVariant value(const QString &key) const;
 
 public slots:
     void login(const QString &username, const QString &password);
