@@ -13,7 +13,7 @@ class OrnApplication : public OrnApiRequest
     Q_OBJECT
 
     Q_PROPERTY(bool canBeLaunched READ canBeLaunched NOTIFY canBeLaunchedChanged)
-    Q_PROPERTY(bool updateAvailable MEMBER mUpdateAvailable NOTIFY updateAvailableChanged)
+    Q_PROPERTY(bool updateAvailable READ updateAvailable NOTIFY updateAvailableChanged)
     Q_PROPERTY(OrnZypp::RepoStatus repoStatus MEMBER mRepoStatus NOTIFY repoStatusChanged)
     Q_PROPERTY(QString installedVersion MEMBER mInstalledVersion NOTIFY installedVersionChanged)
     Q_PROPERTY(QString availableVersion MEMBER mAvailableVersion NOTIFY availableVersionChanged)
@@ -44,6 +44,8 @@ public:
     quint32 appId() const;
     void setAppId(const quint32 &appId);
 
+    bool updateAvailable() const;
+
     bool canBeLaunched() const;
 
     QString category() const;
@@ -73,7 +75,6 @@ private slots:
     void onReposChanged();
     void onAvailablePackagesChanged();
     void onInstalledPackagesChanged();
-    void checkUpdates();
     // This two slots need only for emitting signals
     void onPackageInstalled(const QString &packageId);
     void onPackageRemoved(const QString &packageId);
@@ -82,8 +83,6 @@ private:
     void checkDesktopFile();
 
 private:
-    bool mUpdateAvailable;
-
     OrnZypp::RepoStatus mRepoStatus;
     QString mRepoAlias;
 

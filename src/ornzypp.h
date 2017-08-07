@@ -5,14 +5,14 @@
 
 #include <PackageKit/packagekit-qt5/Transaction>
 
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
-#include <QtDBus/QDBusPendingReply>
 #include <QDebug>
+
+class QDBusPendingCallWatcher;
 
 class OrnZypp : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(bool updatesAvailable READ updatesAvailable NOTIFY updatesChanged)
 
 public:
 
@@ -40,6 +40,7 @@ public:
         QString version;
         QString author;
         QString icon;
+        QString updateId;
     };
 
     struct Repo
@@ -56,9 +57,11 @@ public:
     static const QString ssuPath;
     static const QString ssuModifyRepo;
     static const QString ssuAddRepo;
+    static const QString ssuUpdateRepos;
     static const QString repoBaseUrl;
     static const QString repoNamePrefix;
     static const QString installed;
+    static const QString primaryGzTmpl;
     static const int repoNamePrefixLength;
 
 public:
@@ -75,8 +78,11 @@ public:
     bool isInstalled(const QString &packageName) const;
     QString installedPackage(const QString &packageName) const;
 
+    bool updatesAvailable() const;
     bool hasUpdate(const QString &packageName) const;
-    QString updatePackage(const QString &packageName) const;
+    Q_INVOKABLE QString updatePackage(const QString &packageName) const;
+
+    QString packageRepo(const QString &name) const;
 
     Q_INVOKABLE static QString deviceModel();    
 
@@ -95,6 +101,8 @@ signals:
 public slots:
     bool getInstalledApps();
 
+    void fetchRepos();
+
     void addRepo(const QString &author);
     void modifyRepo(const QString &alias, const RepoAction &action);
     void enableRepos(bool enable);
@@ -110,56 +118,34 @@ public slots:
     void installPackage(const QString &packageId);
     // TODO: an option to autoRemove?
     void removePackage(const QString &packageId);
+    void updateAll();
 
 private slots:
-    void fetchRepos();
     void onRepoModified(const QString &alias, const RepoAction &action);
     void onPackage(PackageKit::Transaction::Info info,
                    const QString &packageId,
                    const QString &summary);
 
 private:
-    void prepareFetching(PackageKit::Transaction *&transaction);
-
+    void pPrepareFetching(PackageKit::Transaction *&transaction);
     void pInstalledApps();
-
-    template<typename Func>
-    void pDbusCall(const QString &method, Func returnMethod,
-                   const QVariantList &args = QVariantList())
-    {
-        auto call = QDBusMessage::createMethodCall(ssuInterface, ssuPath, ssuInterface, method);
-        if (!args.empty())
-        {
-            call.setArguments(args);
-        }
-        qDebug() << "Calling" << call;
-        auto pCall = QDBusConnection::systemBus().asyncCall(call);
-        auto watcher = new QDBusPendingCallWatcher(pCall, this);
-        connect(watcher, &QDBusPendingCallWatcher::finished, returnMethod);
-        connect(watcher, &QDBusPendingCallWatcher::finished,
-#ifdef QT_DEBUG
-                [this, watcher]()
-                {
-                    if (watcher->isError())
-                    {
-                        auto e = watcher->error();
-                        qCritical() << e.name() << e.message();
-                    }
-                    watcher->deleteLater();
-                }
-#else
-                watcher, &QDBusPendingCallWatcher::deleteLater
-#endif
-                );
-    }
+    /// This method is one big dirty hack...
+    void pFetchRepos();
+    void pFetchRepoPackages(const QString &alias);
+    QDBusPendingCallWatcher *pDbusCall(const QString &method, const QVariantList &args = QVariantList());
 
 private:
+    struct RepoMeta
+    {
+        bool enabled;
+        QSet<QString> packages;
+    };
+
     bool mBusy;
     PackageKit::Transaction *mAvailableFetcher;
     PackageKit::Transaction *mInstalledFetcher;
     PackageKit::Transaction *mUpdatesFetcher;
-    /// { alias, enabled }
-    QHash<QString, bool> mRepos;
+    QHash<QString, RepoMeta> mRepos;
     /// { name, package_id }
     QHash<QString, QString> mInstalledPackages;
     /// { name, package_id }

@@ -8,7 +8,6 @@
 class OrnInstalledAppsModel : public QAbstractListModel
 {
     Q_OBJECT
-    Q_PROPERTY(OrnZypp* zypp READ zypp WRITE setZypp NOTIFY zyppChanged)
 
 public:
 
@@ -19,17 +18,13 @@ public:
         VersionRole,
         AuthorRole,
         IconRole,
-        SectionRole
+        SortRole,
+        SectionRole,
+        UpdateAvailableRole
     };
     Q_ENUM(Roles)
 
     explicit OrnInstalledAppsModel(QObject *parent = 0);
-
-    OrnZypp *zypp() const;
-    void setZypp(OrnZypp *zypp);
-
-signals:
-    void zyppChanged();
 
 public slots:
     void reset();
@@ -38,7 +33,6 @@ private slots:
     void onInstalledAppsReady(const OrnZypp::AppList &apps);
 
 private:
-    OrnZypp *mZypp;
     OrnZypp::AppList mData;
 
     // QAbstractItemModel interface

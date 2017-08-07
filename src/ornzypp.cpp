@@ -1,16 +1,14 @@
 #include "ornzypp.h"
 #include "orn.h"
 
-#include <PackageKit/packagekit-qt5/Daemon>
-
-#include <zypp/RepoManager.h>
-#include <zypp/ZYppFactory.h>
-#include <zypp/target/rpm/RpmDb.h>
-
 #include <QtConcurrent/QtConcurrent>
 #include <QSettings>
 #include <QLocale>
 #include <QFileInfo>
+#include <QtXml/QDomDocument>
+#include <QtDBus/QDBusMessage>
+#include <QtDBus/QDBusConnection>
+#include <QtDBus/QDBusPendingReply>
 
 #define SSU_METHOD_DISPLAYNAME QStringLiteral("displayName")
 #define SSU_CONFIG_PATH        QStringLiteral("/etc/ssu/ssu.ini")
@@ -21,9 +19,11 @@ const QString OrnZypp::ssuInterface(QStringLiteral("org.nemo.ssu"));
 const QString OrnZypp::ssuPath(QStringLiteral("/org/nemo/ssu"));
 const QString OrnZypp::ssuModifyRepo(QStringLiteral("modifyRepo"));
 const QString OrnZypp::ssuAddRepo(QStringLiteral("addRepo"));
+const QString OrnZypp::ssuUpdateRepos(QStringLiteral("updateRepos"));
 const QString OrnZypp::repoBaseUrl(QStringLiteral("https://sailfish.openrepos.net/%0/personal/main"));
 const QString OrnZypp::repoNamePrefix(QStringLiteral("openrepos-"));
 const QString OrnZypp::installed(QStringLiteral("installed"));
+const QString OrnZypp::primaryGzTmpl(QStringLiteral("/var/cache/zypp/raw/%0/repodata/primary.xml.gz"));
 const int OrnZypp::repoNamePrefixLength = OrnZypp::repoNamePrefix.length();
 OrnZypp *OrnZypp::gInstance = 0;
 
@@ -34,16 +34,13 @@ OrnZypp::OrnZypp(QObject *parent) :
     mInstalledFetcher(0),
     mUpdatesFetcher(0)
 {
-    // Initialize SSU target
-    zypp::ZYppFactory::instance().getZYpp()->initializeTarget("/");
-
-    // Refetch available packages if repos have been changed
+    // Rescan packages on repos data fetched
+    connect(this, &OrnZypp::reposFetched, this, &OrnZypp::getAllPackages);
+    // Refetch repos data if repos have been changed
     connect(this, &OrnZypp::repoModified, this, &OrnZypp::onRepoModified);
 
     // Fetch repos
-    QtConcurrent::run(this, &OrnZypp::fetchRepos);
-    // Fetch packages
-    this->getAllPackages();
+    this->fetchRepos();
 }
 
 OrnZypp *OrnZypp::instance()
@@ -61,7 +58,7 @@ OrnZypp::RepoStatus OrnZypp::repoStatus(const QString &alias) const
     {
         return RepoNotInstalled;
     }
-    return mRepos[alias] ? RepoEnabled : RepoDisabled;
+    return mRepos[alias].enabled ? RepoEnabled : RepoDisabled;
 }
 
 OrnZypp::RepoList OrnZypp::repoList() const
@@ -70,7 +67,7 @@ OrnZypp::RepoList OrnZypp::repoList() const
     for (auto it = mRepos.constBegin(); it != mRepos.constEnd(); ++it)
     {
         auto alias = it.key();
-        repos << Repo{ it.value(), alias, alias.mid(repoNamePrefixLength) };
+        repos << Repo{ it.value().enabled, alias, alias.mid(repoNamePrefixLength) };
     }
     return repos;
 }
@@ -102,6 +99,11 @@ QString OrnZypp::installedPackage(const QString &packageName) const
     return mInstalledPackages.value(packageName);
 }
 
+bool OrnZypp::updatesAvailable() const
+{
+    return !mUpdates.isEmpty();
+}
+
 bool OrnZypp::hasUpdate(const QString &packageName) const
 {
     return mUpdates.contains(packageName);
@@ -110,6 +112,18 @@ bool OrnZypp::hasUpdate(const QString &packageName) const
 QString OrnZypp::updatePackage(const QString &packageName) const
 {
     return mUpdates.value(packageName);
+}
+
+QString OrnZypp::packageRepo(const QString &name) const
+{
+    for (auto r = mRepos.constBegin(); r != mRepos.constEnd(); ++r)
+    {
+        if (r.value().packages.contains(name))
+        {
+            return r.key();
+        }
+    }
+    return QString();
 }
 
 QString OrnZypp::deviceModel()
@@ -138,40 +152,45 @@ bool OrnZypp::getInstalledApps()
     return true;
 }
 
+void OrnZypp::fetchRepos()
+{
+    QtConcurrent::run(this, &OrnZypp::pFetchRepos);
+}
+
 void OrnZypp::addRepo(const QString &author)
 {
     auto alias = repoNamePrefix + author;
-    pDbusCall(ssuAddRepo, [this, alias]()
-        {
-            qDebug() << "Repo" << alias << "have been added";
-            mRepos.insert(alias, true);
-            emit this->repoModified(alias, AddRepo);
-        },
-        QVariantList{ alias, repoBaseUrl.arg(author) });
+    auto watcher = pDbusCall(ssuAddRepo, QVariantList{ alias, repoBaseUrl.arg(author) });
+    connect(watcher, &QDBusPendingCallWatcher::finished, [this, alias]()
+    {
+        qDebug() << "Repo" << alias << "have been added";
+        mRepos.insert(alias, RepoMeta{ true, QSet<QString>() });
+        emit this->repoModified(alias, AddRepo);
+    });
 }
 
-void OrnZypp::modifyRepo(const QString &alias, const OrnZypp::RepoAction &action)
+void OrnZypp::modifyRepo(const QString &alias, const RepoAction &action)
 {
-    pDbusCall(ssuModifyRepo, [this, alias, action]()
+    auto watcher = pDbusCall(ssuModifyRepo, QVariantList{ action, alias });
+    connect(watcher, &QDBusPendingCallWatcher::finished, [this, alias, action]()
+    {
+        qDebug() << "Repo" << alias << "have been modified with" << action;
+        switch (action)
         {
-            qDebug() << "Repo" << alias << "have been modified with" << action;
-            switch (action)
-            {
-            case RemoveRepo:
-                mRepos.remove(alias);
-                break;
-            case DisableRepo:
-                mRepos[alias] = false;
-                break;
-            case EnableRepo:
-                mRepos[alias] = true;
-                break;
-            default:
-                break;
-            }
-            emit this->repoModified(alias, action);
-        },
-        QVariantList{ action, alias });
+        case RemoveRepo:
+            mRepos.remove(alias);
+            break;
+        case DisableRepo:
+            mRepos[alias].enabled = false;
+            break;
+        case EnableRepo:
+            mRepos[alias].enabled = true;
+            break;
+        default:
+            break;
+        }
+        emit this->repoModified(alias, action);
+    });
 }
 
 void OrnZypp::enableRepos(bool enable)
@@ -219,7 +238,7 @@ void OrnZypp::refreshRepo(const QString &alias, bool force)
 
 void OrnZypp::getAvailablePackages()
 {
-    this->prepareFetching(mAvailableFetcher);
+    this->pPrepareFetching(mAvailableFetcher);
     qDebug() << "Getting all available packages with" << mAvailableFetcher
              << "method getPackages(FilterSupported)";
     connect(mAvailableFetcher, &PackageKit::Transaction::finished, [this]
@@ -233,7 +252,7 @@ void OrnZypp::getAvailablePackages()
 
 void OrnZypp::getInstalledPackages()
 {
-    this->prepareFetching(mInstalledFetcher);
+    this->pPrepareFetching(mInstalledFetcher);
     qDebug() << "Getting all installed packages with" << mInstalledFetcher
              << "method getPackages(FilterInstalled)";
     connect(mInstalledFetcher, &PackageKit::Transaction::finished, [this]
@@ -247,7 +266,7 @@ void OrnZypp::getInstalledPackages()
 
 void OrnZypp::getUpdates()
 {
-    this->prepareFetching(mUpdatesFetcher);
+    this->pPrepareFetching(mUpdatesFetcher);
     qDebug() << "Getting all updates with" << mUpdatesFetcher
              << "method getUpdates()";
     connect(mUpdatesFetcher, &PackageKit::Transaction::finished, [this]
@@ -271,10 +290,11 @@ void OrnZypp::installPackage(const QString &packageId)
     auto t = Orn::transaction();
     connect(t, &PackageKit::Transaction::finished, [this, packageId]()
     {
-        mInstalledPackages.insert(
-                    PackageKit::Transaction::packageName(packageId),
-                    packageId);
+        auto name = PackageKit::Transaction::packageName(packageId);
+        mInstalledPackages.insert(name, packageId);
         emit this->installedPackagesChanged();
+        mUpdates.remove(name);
+        emit this->updatesChanged();
         emit this->packageInstalled(packageId);
     });
     qDebug() << "Installing package" << packageId << "with" << t << "method installPackage()";
@@ -297,39 +317,37 @@ void OrnZypp::removePackage(const QString &packageId)
     t->removePackage(packageId);
 }
 
-void OrnZypp::fetchRepos()
+void OrnZypp::updateAll()
 {
-    mRepos.clear();
-    // NOTE: A hack for SSU repos. Can break on ssu config changes.
-    QSettings ssuSettings(SSU_CONFIG_PATH, QSettings::IniFormat);
-    auto disabled = ssuSettings.value(SSU_DISABLED_KEY).toStringList().toSet();
-    ssuSettings.beginGroup(SSU_REPOS_GROUP);
-    auto repos = ssuSettings.childKeys();
-    for (const auto &repo : repos)
-    {
-        if (repo.startsWith(repoNamePrefix))
-        {
-            auto enabled = !disabled.contains(repo);
-            qDebug() << "Found repo { alias:" << repo << ", enabled:" << enabled << "}";
-            mRepos.insert(repo, enabled);
-        }
-    }
-    emit this->reposFetched();
+    PackageKit::Transaction *t = 0;
+    this->pPrepareFetching(t);
+    connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::getAllPackages);
+    t->updatePackages(mUpdates.values());
 }
 
 void OrnZypp::onRepoModified(const QString &alias, const RepoAction &action)
 {
-    // TODO: Currently avaliable apps are reloaded on every repo change
-    if (action == AddRepo || action == EnableRepo)
+    switch (action)
+    {
+    case AddRepo:
+    case EnableRepo:
     {
         auto t = Orn::transaction();
-        connect(t, &PackageKit::Transaction::finished, this, &OrnZypp::getAllPackages);
+        connect(t, &PackageKit::Transaction::finished, [this, alias]()
+        {
+            this->pFetchRepoPackages(alias);
+            this->getAllPackages();
+        });
         qDebug() << "Refreshing repo" << alias << "with" << t << "method repoSetData()";
         t->repoSetData(alias, QStringLiteral("refresh-now"), QStringLiteral("true"));
     }
-    else
-    {
+    case DisableRepo:
+        this->pFetchRepoPackages(alias);
         this->getAllPackages();
+        break;
+    default:
+        this->getAllPackages();
+        break;
     }
 }
 
@@ -341,22 +359,34 @@ void OrnZypp::onPackage(PackageKit::Transaction::Info info,
     auto idParts = packageId.split(QChar(';'));
     auto name = idParts.first();
     auto repo = idParts.last();
-    // Installed packages don't contain repo in ID so
-    // add all installed packages to lists
     switch (info)
     {
     case PackageKit::Transaction::InfoInstalled:
+        // Add all installed packages to be available show "installed" status
+        // for packages that were installed not from OpenRepos
         mInstalledPackages.insert(name, packageId);
         break;
     case PackageKit::Transaction::InfoAvailable:
-        if (repo.startsWith(repoNamePrefix) || repo == installed)
+        if (repo.startsWith(repoNamePrefix))
         {
             // Add package name to available packages if
             // it's from an ORN repo or is installed
             mAvailablePackages.insertMulti(name, packageId);
         }
+        else if (repo == installed)
+        {
+            repo = this->packageRepo(name);
+            if (!repo.isEmpty())
+            {
+                idParts.replace(3, repo);
+                mAvailablePackages.insert(name, idParts.join(';'));
+            }
+        }
         break;
     case PackageKit::Transaction::InfoEnhancement:
+        // Stupid PackageKit cannot refresh updates list after a repo was removed!
+        // So we need to manually filter updates
+        repo = this->packageRepo(name);
         if (repo.startsWith(repoNamePrefix))
         {
             mUpdates.insert(name, packageId);
@@ -367,7 +397,7 @@ void OrnZypp::onPackage(PackageKit::Transaction::Info info,
     }
 }
 
-void OrnZypp::prepareFetching(PackageKit::Transaction *&transaction)
+void OrnZypp::pPrepareFetching(PackageKit::Transaction *&transaction)
 {
     if (transaction)
     {
@@ -382,26 +412,17 @@ void OrnZypp::prepareFetching(PackageKit::Transaction *&transaction)
 
 void OrnZypp::pInstalledApps()
 {
-    // Load ORN repositories
-    zypp::RepoManager manager;
-    auto repos = manager.knownRepositories();
-    for (const zypp::RepoInfo &repo : repos)
+    AppList apps;
+
+    if (mInstalledPackages.isEmpty() ||
+        mRepos.isEmpty())
     {
-        auto alias = repo.alias();
-        auto qalias = QString::fromStdString(alias);
-        if (qalias.startsWith(repoNamePrefix))
-        {
-            qDebug() << "Loading cache for" << qalias;
-            manager.loadFromCache(repo);
-        }
+        qWarning() << "Installed packages or repositories list is empty";
+        emit this->installedAppsReady(apps);
+        return;
     }
 
-    // Load zypp target
-    zypp::ZYpp &zypp = *zypp::ZYppFactory::instance().getZYpp();
-    zypp.target()->reload();
-
     // Prepare vars for parsing desktop files
-    QString desktop(QStringLiteral(".desktop"));
     QString nameKey(QStringLiteral("Desktop Entry/Name"));
     auto trNameKey = QString(nameKey).append("[%0]");
     auto localeName = QLocale::system().name();
@@ -420,81 +441,185 @@ void OrnZypp::pInstalledApps()
         QStringLiteral("256x256")
     };
 
-    // List installed packages
-    const auto &proxy = zypp.pool().proxy();
-    const auto &rpmDb = zypp.target()->rpmDb();
-    AppList apps;
-    for (auto it = proxy.byKindBegin(zypp::ResKind::package);
-         it != proxy.byKindEnd(zypp::ResKind::package);
-         ++it)
+    // Prepare set to filter installed apps to show only those from OpenRepos
+    QSet<QString> ornPackages;
+    for (const auto &repo : mRepos)
     {
-        zypp::ui::Selectable::constPtr sel(*it);
-        for (auto it2 = sel->picklistBegin(); it2 != sel->picklistEnd(); ++it2)
+        for (const auto &package : repo.packages)
         {
-            zypp::PoolItem pi(*it2);
-            auto solv = pi.satSolvable();
-            auto repo = solv.repository().info().alias();
-            if (repo != "@System" && sel->identicalInstalled(pi))
+            ornPackages.insert(package);
+        }
+    }
+
+    for (const auto &id : mInstalledPackages.values())
+    {
+        auto idParts = id.split(QChar(';'));
+        auto name = idParts[0];
+
+        // Actual filtering
+        if (!ornPackages.contains(name))
+        {
+            continue;
+        }
+
+        auto title = name;
+        QString icon;
+        auto desktopFiles = PackageKit::Transaction::packageDesktopFiles(name);
+
+        qDebug() << "Adding installed package" << name;
+
+        if (!desktopFiles.isEmpty())
+        {
+            auto desktopFile = desktopFiles.first();
+            qDebug() << "Parsing desktop file" << desktopFile;
+            QSettings desktop(desktopFile, QSettings::IniFormat);
+            desktop.setIniCodec("UTF-8");
+            // Read pretty name
+            if (desktop.contains(localeNameKey))
             {
-                qDebug() << "Adding installed package" << QString::fromStdString(solv.asString());
-                // Find .desktop file
-                zypp::target::rpm::RpmHeader::constPtr header;
-                auto name = solv.name();
-                auto qname = QString::fromStdString(name);
-                auto qtitle = qname;
-                auto edition = solv.edition();
-                QString qicon;
-                rpmDb.getData(name, edition, header);
-                for (const auto &f : header->tag_filenames())
+                title = desktop.value(localeNameKey).toString();
+            }
+            else if (!langNameKey.isEmpty() && desktop.contains(langNameKey))
+            {
+                title = desktop.value(langNameKey).toString();
+            }
+            else if (desktop.contains(nameKey))
+            {
+                title = desktop.value(nameKey).toString();
+            }
+            qDebug() << "Using name" << title << "for package" << name;
+            // Find icon
+            if (desktop.contains(iconKey))
+            {
+                auto iconName = desktop.value(iconKey).toString();
+                for (const auto &s : iconSizes)
                 {
-                    auto qf = QString::fromStdString(f);
-                    if (qf.endsWith(desktop))
+                    auto pi = iconPath.arg(s, iconName);
+                    if (QFileInfo(pi).isFile())
                     {
-                        qDebug() << "Parsing desktop file" << qf;
-                        QSettings desktopFile(qf, QSettings::IniFormat);
-                        desktopFile.setIniCodec("UTF-8");
-                        // Read pretty name
-                        if (desktopFile.contains(localeNameKey))
-                        {
-                            qtitle = desktopFile.value(localeNameKey).toString();
-                        }
-                        else if (!langNameKey.isEmpty() && desktopFile.contains(langNameKey))
-                        {
-                            qtitle = desktopFile.value(langNameKey).toString();
-                        }
-                        else if (desktopFile.contains(nameKey))
-                        {
-                            qtitle = desktopFile.value(nameKey).toString();
-                        }
-                        qDebug() << "Using name" << qtitle << "for package" << qname;
-                        // Find icon
-                        if (desktopFile.contains(iconKey))
-                        {
-                            for (const auto &s : iconSizes)
-                            {
-                                auto qi = iconPath.arg(s, desktopFile.value(iconKey).toString());
-                                if (QFileInfo(qi).isFile())
-                                {
-                                    qDebug() << "Using package icon" << qi;
-                                    qicon = qi;
-                                    break;
-                                }
-                            }
-                        }
+                        qDebug() << "Using package icon" << pi;
+                        icon = pi;
                         break;
                     }
                 }
-                apps << App{
-                    qname,
-                    qtitle,
-                    QString::fromStdString(edition.asString()),
-                    QString::fromStdString(repo).mid(repoNamePrefixLength),
-                    qicon
-                };
             }
         }
+        apps << App{
+            name,
+            title,
+            idParts[1],
+            this->packageRepo(name).mid(repoNamePrefixLength),
+            icon,
+            // The update package id or an empty string
+            mUpdates.value(name)
+        };
     }
 
     emit this->installedAppsReady(apps);
     mBusy = false;
+}
+
+void OrnZypp::pFetchRepos()
+{
+    qDebug() << "Refreshing repo list";
+
+    mRepos.clear();
+
+    // NOTE: A hack for SSU repos. Can break on ssu config changes.
+    QSettings ssuSettings(SSU_CONFIG_PATH, QSettings::IniFormat);
+    auto disabled = ssuSettings.value(SSU_DISABLED_KEY).toStringList().toSet();
+    ssuSettings.beginGroup(SSU_REPOS_GROUP);
+    auto aliases = ssuSettings.childKeys();
+
+    // NOTE: A hack for packages filtering
+    for (const auto &alias : aliases)
+    {
+        if (alias.startsWith(repoNamePrefix))
+        {
+            auto enabled = !disabled.contains(alias);
+            qDebug() << "Found " << (enabled ? "enabled" : "disabled") << " repo" << alias;
+            mRepos.insert(alias, RepoMeta{ enabled, QSet<QString>() });
+            this->pFetchRepoPackages(alias);
+        }
+    }
+
+    emit this->reposFetched();
+}
+
+void OrnZypp::pFetchRepoPackages(const QString &alias)
+{
+    if (!mRepos.contains(alias))
+    {
+        qWarning() << "Repo list does not contain the" << alias << "repo";
+        return;
+    }
+
+    auto &repo = mRepos[alias];
+
+    if (!repo.enabled)
+    {
+#ifdef QT_DEBUG
+        if (!repo.packages.isEmpty())
+        {
+            qDebug() << "Clearing repo" << alias << "package list";
+        }
+#endif
+        repo.packages.clear();
+        return;
+    }
+
+    auto primaryGzPath = primaryGzTmpl.arg(alias);
+    qDebug() << "Reading" << primaryGzPath;
+    QFile primaryGz(primaryGzPath);
+    if (!primaryGz.open(QFile::ReadOnly))
+    {
+        qWarning() << primaryGz.errorString();
+        return;
+    }
+    QDomDocument primary;
+    primary.setContent(Orn::gUncompress(primaryGz.readAll()));
+    auto metaElem = primary.documentElement();
+    auto packageNode = metaElem.firstChild();
+    while(!packageNode.isNull())
+    {
+        auto packageElem = packageNode.toElement();
+        if(!packageElem.isNull())
+        {
+            auto nameNodes = packageElem.elementsByTagName(QStringLiteral("name"));
+            auto nameElem = nameNodes.at(0).toElement();
+            if(!nameElem.isNull())
+            {
+                repo.packages.insert(nameElem.text());
+            }
+        }
+        packageNode = packageNode.nextSibling();
+    }
+}
+
+QDBusPendingCallWatcher *OrnZypp::pDbusCall(const QString &method, const QVariantList &args)
+{
+    auto call = QDBusMessage::createMethodCall(ssuInterface, ssuPath, ssuInterface, method);
+    if (!args.empty())
+    {
+        call.setArguments(args);
+    }
+    qDebug() << "Calling" << call;
+    auto pCall = QDBusConnection::systemBus().asyncCall(call);
+    auto watcher = new QDBusPendingCallWatcher(pCall, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished,
+#ifdef QT_DEBUG
+            [watcher]()
+            {
+                if (watcher->isError())
+                {
+                    auto e = watcher->error();
+                    qCritical() << e.name() << e.message();
+                }
+                watcher->deleteLater();
+            }
+#else
+            watcher, &QDBusPendingCallWatcher::deleteLater
+#endif
+            );
+    return watcher;
 }

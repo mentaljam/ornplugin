@@ -10,12 +10,12 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFileInfo>
+#include <QTimer>
 
 #include <QDebug>
 
 OrnApplication::OrnApplication(QObject *parent) :
     OrnApiRequest(parent),
-    mUpdateAvailable(false),
     mRepoStatus(OrnZypp::RepoNotInstalled),
     mAppId(0),
     mUserId(0),
@@ -30,11 +30,9 @@ OrnApplication::OrnApplication(QObject *parent) :
     connect(ornZypp, &OrnZypp::repoModified, this, &OrnApplication::onReposChanged);
     connect(ornZypp, &OrnZypp::availablePackagesChanged, this, &OrnApplication::onAvailablePackagesChanged);
     connect(ornZypp, &OrnZypp::installedPackagesChanged, this, &OrnApplication::onInstalledPackagesChanged);
+    connect(ornZypp, &OrnZypp::updatesChanged, this, &OrnApplication::updateAvailableChanged);
     connect(ornZypp, &OrnZypp::packageInstalled, this, &OrnApplication::onPackageInstalled);
     connect(ornZypp, &OrnZypp::packageRemoved, this, &OrnApplication::onPackageRemoved);
-
-    connect(this, &OrnApplication::installedVersionChanged, this, &OrnApplication::checkUpdates);
-    connect(this, &OrnApplication::availableVersionChanged, this, &OrnApplication::checkUpdates);
 }
 
 quint32 OrnApplication::appId() const
@@ -49,6 +47,11 @@ void OrnApplication::setAppId(const quint32 &appId)
         mAppId = appId;
         emit this->appIdChanged();
     }
+}
+
+bool OrnApplication::updateAvailable() const
+{
+    return OrnZypp::instance()->hasUpdate(mPackageName);
 }
 
 bool OrnApplication::canBeLaunched() const
@@ -160,6 +163,7 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     }
 
     qDebug() << "Application" << mPackageName << "information updated";
+    this->onInstalledPackagesChanged();
     emit this->updated();
 }
 
@@ -177,7 +181,6 @@ void OrnApplication::onReposChanged()
         mRepoStatus = repoStatus;
         emit this->repoStatusChanged();
         this->onAvailablePackagesChanged();
-        this->onInstalledPackagesChanged();
     }
 }
 
@@ -251,17 +254,6 @@ void OrnApplication::onInstalledPackagesChanged()
         emit this->installedVersionChanged();
     }
     this->checkDesktopFile();
-}
-
-void OrnApplication::checkUpdates()
-{
-    auto updateAvailable = mInstalledVersion.isEmpty() ? false :
-        OrnVersion(mInstalledVersion) < OrnVersion(mAvailableVersion);
-    if (mUpdateAvailable != updateAvailable)
-    {
-        mUpdateAvailable = updateAvailable;
-        emit this->updateAvailableChanged();
-    }
 }
 
 void OrnApplication::onPackageInstalled(const QString &packageId)

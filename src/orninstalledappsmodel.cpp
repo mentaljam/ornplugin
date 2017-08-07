@@ -4,47 +4,19 @@
 #include <QDebug>
 
 OrnInstalledAppsModel::OrnInstalledAppsModel(QObject *parent) :
-    QAbstractListModel(parent),
-    mZypp(0)
+    QAbstractListModel(parent)
 {
-
-}
-
-OrnZypp *OrnInstalledAppsModel::zypp() const
-{
-    return mZypp;
-}
-
-void OrnInstalledAppsModel::setZypp(OrnZypp *zypp)
-{
-    if (mZypp != zypp)
-    {
-        if (mZypp)
-        {
-            disconnect(mZypp, &OrnZypp::installedAppsReady,
-                       this, &OrnInstalledAppsModel::onInstalledAppsReady);
-        }
-        mZypp = zypp;
-        if (mZypp)
-        {
-            connect(mZypp, &OrnZypp::installedAppsReady,
-                    this, &OrnInstalledAppsModel::onInstalledAppsReady);
-            this->reset();
-        }
-        emit this->zyppChanged();
-    }
+    qDebug() << OrnZypp::instance()->updatesAvailable();
+    connect(OrnZypp::instance(), &OrnZypp::installedAppsReady,
+            this, &OrnInstalledAppsModel::onInstalledAppsReady);
+    this->reset();
 }
 
 void OrnInstalledAppsModel::reset()
 {
-    if (!mZypp)
-    {
-        qCritical() << "Zypp should be set";
-        return;
-    }
     qDebug() << "Resetting model";
     this->beginResetModel();
-    mZypp->getInstalledApps();
+    OrnZypp::instance()->getInstalledApps();
 }
 
 void OrnInstalledAppsModel::onInstalledAppsReady(const OrnZypp::AppList &apps)
@@ -86,8 +58,14 @@ QVariant OrnInstalledAppsModel::data(const QModelIndex &index, int role) const
         return app.author;
     case IconRole:
         return app.icon;
+    case SortRole:
+        // First show apps with available updates then sort by title
+        return QString::number(app.updateId.isEmpty()).append(app.title);
     case SectionRole:
         return app.title.at(0).toUpper();
+    case UpdateAvailableRole:
+        // Return int to make it easier to parse
+        return (int)!app.updateId.isEmpty();
     default:
         return QVariant();
     }
@@ -101,6 +79,7 @@ QHash<int, QByteArray> OrnInstalledAppsModel::roleNames() const
         { VersionRole, "appVersion"    },
         { AuthorRole,  "appAuthor"     },
         { IconRole,    "appIconSource" },
-        { SectionRole, "section"       }
+        { SectionRole, "section"       },
+        { UpdateAvailableRole, "updateAvailable" }
     };
 }
