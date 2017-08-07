@@ -20,6 +20,9 @@ QList<quint32> toIntList(const QJsonValue &value);
 
 PackageKit::Transaction *transaction();
 
+/// Source: https://stackoverflow.com/a/7351507
+QByteArray gUncompress(const QByteArray &data);
+
 } // namespace Orn
 
 #endif // ORN_H

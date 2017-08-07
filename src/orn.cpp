@@ -2,6 +2,8 @@
 
 #include <PackageKit/packagekit-qt5/Transaction>
 
+#include <zlib.h>
+
 #include <QJsonValue>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -58,6 +60,61 @@ PackageKit::Transaction *transaction()
     });
 #endif
     return t;
+}
+
+QByteArray gUncompress(const QByteArray &data)
+{
+    QByteArray result;
+
+    if (data.size() <= 4)
+    {
+        qWarning("Input data is truncated");
+        return result;
+    }
+
+    // Allocate inflate state
+    z_stream strm;
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    strm.avail_in = data.size();
+    strm.next_in = (Bytef*)(data.data());
+
+    // GZip decoding
+    auto ret = inflateInit2(&strm, 15 + 16);
+    if (ret != Z_OK)
+    {
+        return result;
+    }
+
+    // Run inflate()
+    static const int chunkSize = 1024;
+    char out[chunkSize];
+    do
+    {
+        strm.avail_out = chunkSize;
+        strm.next_out = (Bytef*)(out);
+
+        ret = inflate(&strm, Z_NO_FLUSH);
+
+        Q_ASSERT(ret != Z_STREAM_ERROR);
+        switch (ret)
+        {
+        case Z_NEED_DICT:
+            ret = Z_DATA_ERROR;
+        case Z_DATA_ERROR:
+        case Z_MEM_ERROR:
+            (void)inflateEnd(&strm);
+            return QByteArray();
+        }
+
+        result.append(out, chunkSize - strm.avail_out);
+    }
+    while (strm.avail_out == 0);
+
+    // Clean up and return
+    inflateEnd(&strm);
+    return result;
 }
 
 } // namespace Orn
