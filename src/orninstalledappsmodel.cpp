@@ -6,7 +6,6 @@
 OrnInstalledAppsModel::OrnInstalledAppsModel(QObject *parent) :
     QAbstractListModel(parent)
 {
-    qDebug() << OrnZypp::instance()->updatesAvailable();
     connect(OrnZypp::instance(), &OrnZypp::installedAppsReady,
             this, &OrnInstalledAppsModel::onInstalledAppsReady);
     this->reset();

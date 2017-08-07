@@ -2,10 +2,9 @@
 #define ORNZYPP_H
 
 #include <QObject>
+#include <QSet>
 
 #include <PackageKit/packagekit-qt5/Transaction>
-
-#include <QDebug>
 
 class QDBusPendingCallWatcher;
 
@@ -88,7 +87,8 @@ public:
 
 signals:
     void installedAppsReady(const AppList &apps);
-    void reposFetched();
+    void beginRepoFetching();
+    void endRepoFetching();
     void repoModified(const QString &alias, const RepoAction &action);
 
     void availablePackagesChanged();

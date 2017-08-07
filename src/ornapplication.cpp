@@ -26,7 +26,7 @@ OrnApplication::OrnApplication(QObject *parent) :
     connect(this, &OrnApplication::jsonReady, this, &OrnApplication::onJsonReady);
 
     auto ornZypp = OrnZypp::instance();
-    connect(ornZypp, &OrnZypp::reposFetched, this, &OrnApplication::onReposChanged);
+    connect(ornZypp, &OrnZypp::endRepoFetching, this, &OrnApplication::onReposChanged);
     connect(ornZypp, &OrnZypp::repoModified, this, &OrnApplication::onReposChanged);
     connect(ornZypp, &OrnZypp::availablePackagesChanged, this, &OrnApplication::onAvailablePackagesChanged);
     connect(ornZypp, &OrnZypp::installedPackagesChanged, this, &OrnApplication::onInstalledPackagesChanged);

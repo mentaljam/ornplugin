@@ -10,6 +10,8 @@
 #include <QtDBus/QDBusConnection>
 #include <QtDBus/QDBusPendingReply>
 
+#include <QDebug>
+
 #define SSU_METHOD_DISPLAYNAME QStringLiteral("displayName")
 #define SSU_CONFIG_PATH        QStringLiteral("/etc/ssu/ssu.ini")
 #define SSU_REPOS_GROUP        QStringLiteral("repository-urls")
@@ -35,7 +37,7 @@ OrnZypp::OrnZypp(QObject *parent) :
     mUpdatesFetcher(0)
 {
     // Rescan packages on repos data fetched
-    connect(this, &OrnZypp::reposFetched, this, &OrnZypp::getAllPackages);
+    connect(this, &OrnZypp::endRepoFetching, this, &OrnZypp::getAllPackages);
     // Refetch repos data if repos have been changed
     connect(this, &OrnZypp::repoModified, this, &OrnZypp::onRepoModified);
 
@@ -521,6 +523,8 @@ void OrnZypp::pInstalledApps()
 
 void OrnZypp::pFetchRepos()
 {
+    emit this->beginRepoFetching();
+
     qDebug() << "Refreshing repo list";
 
     mRepos.clear();
@@ -543,7 +547,7 @@ void OrnZypp::pFetchRepos()
         }
     }
 
-    emit this->reposFetched();
+    emit this->endRepoFetching();
 }
 
 void OrnZypp::pFetchRepoPackages(const QString &alias)
@@ -568,12 +572,21 @@ void OrnZypp::pFetchRepoPackages(const QString &alias)
         return;
     }
 
+    // FIXME ? Not a good solution but we need to be sure that repo was cached
+    {
+        auto t = Orn::transaction();
+        QEventLoop loop;
+        connect(t, &PackageKit::Transaction::finished, &loop, &QEventLoop::quit);
+        t->repoSetData(alias, QStringLiteral("refresh-now"), QStringLiteral("false"));
+        loop.exec();
+    }
+
     auto primaryGzPath = primaryGzTmpl.arg(alias);
     qDebug() << "Reading" << primaryGzPath;
     QFile primaryGz(primaryGzPath);
     if (!primaryGz.open(QFile::ReadOnly))
     {
-        qWarning() << primaryGz.errorString();
+        qWarning() << primaryGz.errorString() << "-" << primaryGzPath;
         return;
     }
     QDomDocument primary;
