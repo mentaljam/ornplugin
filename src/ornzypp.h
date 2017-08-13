@@ -32,6 +32,8 @@ public:
     };
     Q_ENUM(RepoStatus)
 
+    Q_ENUM(PackageKit::Transaction::Error)
+
     struct App
     {
         QString name;
