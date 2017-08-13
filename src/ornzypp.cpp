@@ -220,14 +220,14 @@ void OrnZypp::enableRepos(bool enable)
 
 void OrnZypp::refreshRepos(bool force)
 {
-    auto t = Orn::transaction();
+    auto t = transaction();
     qDebug() << "Refreshing repos with" << t << "method refreshCache()";
     t->refreshCache(force);
 }
 
 void OrnZypp::refreshRepo(const QString &alias, bool force)
 {
-    auto t = Orn::transaction();
+    auto t = transaction();
     qDebug() << "Refreshing repo" << alias << "with" << t << "method repoSetData()";
     t->repoSetData(alias, QStringLiteral("refresh-now"),
                    force ? QStringLiteral("true") : QStringLiteral("false"));
@@ -284,7 +284,7 @@ void OrnZypp::getAllPackages()
 
 void OrnZypp::installPackage(const QString &packageId)
 {
-    auto t = Orn::transaction();
+    auto t = transaction();
     connect(t, &PackageKit::Transaction::finished, [this, packageId]()
     {
         auto name = PackageKit::Transaction::packageName(packageId);
@@ -300,7 +300,7 @@ void OrnZypp::installPackage(const QString &packageId)
 
 void OrnZypp::removePackage(const QString &packageId)
 {
-    auto t = Orn::transaction();
+    auto t = transaction();
     connect(t, &PackageKit::Transaction::finished, [this, packageId]()
     {
         auto name = PackageKit::Transaction::packageName(packageId);
@@ -329,7 +329,7 @@ void OrnZypp::onRepoModified(const QString &alias, const RepoAction &action)
     case AddRepo:
     case EnableRepo:
     {
-        auto t = Orn::transaction();
+        auto t = transaction();
         connect(t, &PackageKit::Transaction::finished, [this, alias]()
         {
             this->pFetchRepoPackages(alias);
@@ -394,17 +394,37 @@ void OrnZypp::onPackage(PackageKit::Transaction::Info info,
     }
 }
 
-void OrnZypp::pPrepareFetching(PackageKit::Transaction *&transaction)
+PackageKit::Transaction *OrnZypp::transaction()
 {
-    if (transaction)
+    auto t = new PackageKit::Transaction();
+    connect(t, &PackageKit::Transaction::finished, t, &PackageKit::Transaction::deleteLater);
+    connect(t, &PackageKit::Transaction::errorCode, this, &OrnZypp::pkError);
+#ifdef QT_DEBUG
+    connect(t, &PackageKit::Transaction::finished,
+            [t](PackageKit::Transaction::Exit status, uint runtime)
+    {
+        qDebug() << t << "finished in" << runtime << "msec" << "with status" << status;
+    });
+    connect(t, &PackageKit::Transaction::errorCode,
+            [t](PackageKit::Transaction::Error error, const QString &details)
+    {
+        qDebug() << "An error occured while running" << t << ":" << error << "-" << details;
+    });
+#endif
+    return t;
+}
+
+void OrnZypp::pPrepareFetching(PackageKit::Transaction *&fetcher)
+{
+    if (fetcher)
     {
         qWarning() << "OrnZypp is already fetching packages - canceling";
-        transaction->cancel();
-        transaction->deleteLater();
-        transaction = 0;
+        fetcher->cancel();
+        fetcher->deleteLater();
+        fetcher = 0;
     }
-    transaction = Orn::transaction();
-    connect(transaction, &PackageKit::Transaction::package, this, &OrnZypp::onPackage);
+    fetcher = transaction();
+    connect(fetcher, &PackageKit::Transaction::package, this, &OrnZypp::onPackage);
 }
 
 void OrnZypp::pInstalledApps()

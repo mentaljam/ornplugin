@@ -4,8 +4,6 @@
 #include <QDateTime>
 #include <QJsonValue>
 
-namespace PackageKit { class Transaction; }
-
 namespace Orn
 {
 
@@ -16,8 +14,6 @@ QString toString(const QJsonValue &value);
 QDateTime toDateTime(const QJsonValue &value);
 
 QList<quint32> toIntList(const QJsonValue &value);
-
-PackageKit::Transaction *transaction();
 
 } // namespace Orn
 

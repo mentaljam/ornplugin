@@ -1,7 +1,5 @@
 #include "orn.h"
 
-#include <PackageKit/packagekit-qt5/Transaction>
-
 #include <QJsonArray>
 #include <QJsonObject>
 
@@ -35,25 +33,6 @@ QList<quint32> toIntList(const QJsonValue &value)
         list << toUint(v.toObject()[tidKey]);
     }
     return list;
-}
-
-PackageKit::Transaction *transaction()
-{
-    auto t = new PackageKit::Transaction();
-    QObject::connect(t, &PackageKit::Transaction::finished,
-                     [=](PackageKit::Transaction::Exit status, uint runtime)
-    {
-        qDebug() << t << "finished in" << runtime << "msec" << "with status" << status;
-        t->deleteLater();
-    });
-#ifdef QT_DEBUG
-    QObject::connect(t, &PackageKit::Transaction::errorCode,
-                     [=](PackageKit::Transaction::Error error, const QString &details)
-    {
-        qDebug() << "An error occured while running" << t << ":" << error << "-" << details;
-    });
-#endif
-    return t;
 }
 
 } // namespace Orn

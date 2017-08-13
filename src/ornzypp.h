@@ -98,6 +98,8 @@ signals:
     void packageInstalled(const QString &packageId);
     void packageRemoved(const QString &packageId);
 
+    void pkError(int error, const QString &details);
+
 public slots:
     bool getInstalledApps();
 
@@ -126,8 +128,9 @@ private slots:
                    const QString &packageId,
                    const QString &summary);
 
-private:
-    void pPrepareFetching(PackageKit::Transaction *&transaction);
+private:    
+    PackageKit::Transaction *transaction();
+    void pPrepareFetching(PackageKit::Transaction *&fetcher);
     void pInstalledApps();
     /// This method is one big dirty hack...
     void pFetchRepos();
