@@ -1,14 +1,12 @@
 #include "ornzypp.h"
 #include "orn.h"
 
+#include <solv/repo_solv.h>
+
 #include <QtConcurrent/QtConcurrent>
-#include <QSettings>
-#include <QLocale>
-#include <QFileInfo>
-#include <QtXml/QDomDocument>
 #include <QtDBus/QDBusMessage>
 #include <QtDBus/QDBusConnection>
-#include <QtDBus/QDBusPendingReply>
+#include <QtDBus/QDBusPendingCallWatcher>
 
 #include <QDebug>
 
@@ -25,7 +23,7 @@ const QString OrnZypp::ssuUpdateRepos(QStringLiteral("updateRepos"));
 const QString OrnZypp::repoBaseUrl(QStringLiteral("https://sailfish.openrepos.net/%0/personal/main"));
 const QString OrnZypp::repoNamePrefix(QStringLiteral("openrepos-"));
 const QString OrnZypp::installed(QStringLiteral("installed"));
-const QString OrnZypp::primaryGzTmpl(QStringLiteral("/var/cache/zypp/raw/%0/repodata/primary.xml.gz"));
+const QString OrnZypp::solvTmpl(QStringLiteral("/var/cache/zypp/solv/%0/solv"));
 const int OrnZypp::repoNamePrefixLength = OrnZypp::repoNamePrefix.length();
 OrnZypp *OrnZypp::gInstance = 0;
 
@@ -40,9 +38,6 @@ OrnZypp::OrnZypp(QObject *parent) :
     connect(this, &OrnZypp::endRepoFetching, this, &OrnZypp::getAllPackages);
     // Refetch repos data if repos have been changed
     connect(this, &OrnZypp::repoModified, this, &OrnZypp::onRepoModified);
-
-    // Fetch repos
-    this->fetchRepos();
 }
 
 OrnZypp *OrnZypp::instance()
@@ -560,53 +555,28 @@ void OrnZypp::pFetchRepoPackages(const QString &alias)
 
     auto &repo = mRepos[alias];
 
-    if (!repo.enabled)
+    qDebug() << "Clearing repo" << alias << "package list";
+    repo.packages.clear();
+
+    auto spath = solvTmpl.arg(alias);
+    qDebug() << "Reading" << spath;
+    auto spool = pool_create();
+    auto srepo = repo_create(spool, alias.toUtf8().data());
+    auto sfile = fopen(spath.toUtf8().data(), "r");
+
+    repo_add_solv(srepo, sfile, 0);
+    fclose(sfile);
+
+    for (int i = 0; i < spool->nsolvables; ++i)
     {
-#ifdef QT_DEBUG
-        if (!repo.packages.isEmpty())
-        {
-            qDebug() << "Clearing repo" << alias << "package list";
-        }
-#endif
-        repo.packages.clear();
-        return;
+        auto s = &spool->solvables[i];
+        repo.packages.insert(solvable_lookup_str(s, SOLVABLE_NAME));
     }
 
-    // FIXME ? Not a good solution but we need to be sure that repo was cached
-    {
-        auto t = Orn::transaction();
-        QEventLoop loop;
-        connect(t, &PackageKit::Transaction::finished, &loop, &QEventLoop::quit);
-        t->repoSetData(alias, QStringLiteral("refresh-now"), QStringLiteral("false"));
-        loop.exec();
-    }
+    repo_free(srepo, 0);
+    pool_free(spool);
 
-    auto primaryGzPath = primaryGzTmpl.arg(alias);
-    qDebug() << "Reading" << primaryGzPath;
-    QFile primaryGz(primaryGzPath);
-    if (!primaryGz.open(QFile::ReadOnly))
-    {
-        qWarning() << primaryGz.errorString() << "-" << primaryGzPath;
-        return;
-    }
-    QDomDocument primary;
-    primary.setContent(Orn::gUncompress(primaryGz.readAll()));
-    auto metaElem = primary.documentElement();
-    auto packageNode = metaElem.firstChild();
-    while(!packageNode.isNull())
-    {
-        auto packageElem = packageNode.toElement();
-        if(!packageElem.isNull())
-        {
-            auto nameNodes = packageElem.elementsByTagName(QStringLiteral("name"));
-            auto nameElem = nameNodes.at(0).toElement();
-            if(!nameElem.isNull())
-            {
-                repo.packages.insert(nameElem.text());
-            }
-        }
-        packageNode = packageNode.nextSibling();
-    }
+    qDebug() << repo.packages.size() << "packages were added to the" << alias << "repo";
 }
 
 QDBusPendingCallWatcher *OrnZypp::pDbusCall(const QString &method, const QVariantList &args)

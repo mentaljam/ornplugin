@@ -60,7 +60,7 @@ public:
     static const QString repoBaseUrl;
     static const QString repoNamePrefix;
     static const QString installed;
-    static const QString primaryGzTmpl;
+    static const QString solvTmpl;
     static const int repoNamePrefixLength;
 
 public:
