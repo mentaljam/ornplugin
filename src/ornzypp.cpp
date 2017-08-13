@@ -285,13 +285,21 @@ void OrnZypp::getAllPackages()
 void OrnZypp::installPackage(const QString &packageId)
 {
     auto t = transaction();
-    connect(t, &PackageKit::Transaction::finished, [this, packageId]()
+    connect(t, &PackageKit::Transaction::finished,
+            [this, packageId](PackageKit::Transaction::Exit status, uint runtime)
     {
+        Q_UNUSED(runtime)
+        if (status != PackageKit::Transaction::ExitSuccess)
+        {
+            return;
+        }
         auto name = PackageKit::Transaction::packageName(packageId);
         mInstalledPackages.insert(name, packageId);
         emit this->installedPackagesChanged();
-        mUpdates.remove(name);
-        emit this->updatesChanged();
+        if (mUpdates.remove(name))
+        {
+            emit this->updatesChanged();
+        }
         emit this->packageInstalled(packageId);
     });
     qDebug() << "Installing package" << packageId << "with" << t << "method installPackage()";
@@ -301,8 +309,14 @@ void OrnZypp::installPackage(const QString &packageId)
 void OrnZypp::removePackage(const QString &packageId)
 {
     auto t = transaction();
-    connect(t, &PackageKit::Transaction::finished, [this, packageId]()
+    connect(t, &PackageKit::Transaction::finished,
+            [this, packageId](PackageKit::Transaction::Exit status, uint runtime)
     {
+        Q_UNUSED(runtime)
+        if (status != PackageKit::Transaction::ExitSuccess)
+        {
+            return;
+        }
         auto name = PackageKit::Transaction::packageName(packageId);
         if (mInstalledPackages.remove(name))
         {
@@ -330,8 +344,14 @@ void OrnZypp::onRepoModified(const QString &alias, const RepoAction &action)
     case EnableRepo:
     {
         auto t = transaction();
-        connect(t, &PackageKit::Transaction::finished, [this, alias]()
+        connect(t, &PackageKit::Transaction::finished,
+                [this, alias](PackageKit::Transaction::Exit status, uint runtime)
         {
+            Q_UNUSED(runtime)
+            if (status != PackageKit::Transaction::ExitSuccess)
+            {
+                return;
+            }
             this->pFetchRepoPackages(alias);
             this->getAllPackages();
         });

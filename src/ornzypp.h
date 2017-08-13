@@ -130,7 +130,7 @@ private slots:
                    const QString &packageId,
                    const QString &summary);
 
-private:    
+private:
     PackageKit::Transaction *transaction();
     void pPrepareFetching(PackageKit::Transaction *&fetcher);
     void pInstalledApps();
