@@ -602,7 +602,13 @@ void OrnZypp::pFetchRepoPackages(const QString &alias)
     qDebug() << "Reading" << spath;
     auto spool = pool_create();
     auto srepo = repo_create(spool, alias.toUtf8().data());
+
     auto sfile = fopen(spath.toUtf8().data(), "r");
+    if (!sfile)
+    {
+        qCritical() << "Could not read" << spath;
+        return;
+    }
 
     repo_add_solv(srepo, sfile, 0);
     fclose(sfile);
