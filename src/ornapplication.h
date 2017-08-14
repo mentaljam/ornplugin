@@ -59,8 +59,6 @@ signals:
     void updateAvailableChanged();
     void repoStatusChanged();
     void appNotFound();
-    // TODO: currently does nothing
-    void updateError();
     void installed();
     void removed();
 
