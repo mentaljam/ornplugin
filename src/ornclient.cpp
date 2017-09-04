@@ -28,6 +28,8 @@
 
 #define APPLICATION_JSON    QByteArrayLiteral("application/json")
 
+OrnClient *OrnClient::gInstance = nullptr;
+
 extern QNetworkAccessManager *ornNetworkAccessManager;
 
 OrnClient::OrnClient(QObject *parent) :
@@ -103,6 +105,15 @@ OrnClient::~OrnClient()
     {
         qWarning() << "Could not write bookmarks file" << path;
     }
+}
+
+OrnClient *OrnClient::instance()
+{
+    if(!gInstance)
+    {
+        gInstance = new OrnClient();
+    }
+    return gInstance;
 }
 
 bool OrnClient::authorised() const

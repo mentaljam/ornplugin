@@ -8,20 +8,33 @@
 
 class QSettings;
 class QTimer;
+class QQmlEngine;
+class QJSEngine;
 
 class OrnClient : public OrnApiRequest
 {
+    friend class OrnBackup;
+
     Q_OBJECT
     Q_PROPERTY(bool authorised READ authorised NOTIFY authorisedChanged)
     Q_PROPERTY(bool cookieIsValid READ cookieIsValid NOTIFY cookieIsValidChanged)
     Q_PROPERTY(quint32 userId READ userId NOTIFY authorisedChanged)
     Q_PROPERTY(QString userName READ userName NOTIFY authorisedChanged)
     Q_PROPERTY(QString userIconSource READ userIconSource NOTIFY authorisedChanged)
-    Q_PROPERTY(QList<quint32> bookmarks READ bookmarks NOTIFY bookmarkChanged)
+    Q_PROPERTY(QList<quint32> bookmarks READ bookmarks NOTIFY bookmarksChanged)
 
 public:
     explicit OrnClient(QObject *parent = 0);
     ~OrnClient();
+
+    static OrnClient *instance();
+    static inline QObject *qmlInstance(QQmlEngine *engine, QJSEngine *scriptEngine)
+    {
+        Q_UNUSED(engine)
+        Q_UNUSED(scriptEngine)
+
+        return OrnClient::instance();
+    }
 
     bool authorised() const;
     bool cookieIsValid() const;
@@ -50,6 +63,7 @@ signals:
     void cookieIsValidChanged();
     void commentAdded(quint32 cid);
     void commentEdited(quint32 cid);
+    void bookmarksChanged();
     void bookmarkChanged(quint32 appid, bool bookmarked);
 
 private slots:
@@ -67,6 +81,8 @@ private:
     QSettings *mSettings;
     QTimer *mCookieTimer;
     QSet<quint32> mBookmarks;
+
+    static OrnClient *gInstance;
 };
 
 #endif // ORNCLIENT_H

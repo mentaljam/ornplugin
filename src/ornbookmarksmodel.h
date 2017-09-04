@@ -3,12 +3,9 @@
 
 #include "ornabstractlistmodel.h"
 
-class OrnClient;
-
 class OrnBookmarksModel : public OrnAbstractListModel
 {
     Q_OBJECT
-    Q_PROPERTY(OrnClient* client READ client WRITE setClient NOTIFY clientChanged)
 
 public:
 
@@ -22,18 +19,9 @@ public:
 
     explicit OrnBookmarksModel(QObject *parent = 0);
 
-    OrnClient *client() const;
-    void setClient(OrnClient *client);
-
-signals:
-    void clientChanged();
-
 private slots:
     void onBookmarkChanged(quint32 appId, bool bookmarked);
     void addApp(const quint32 &appId);
-
-private:
-    OrnClient *mClient;
 
     // QAbstractItemModel interface
 public:

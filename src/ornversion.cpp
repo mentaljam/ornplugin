@@ -2,6 +2,11 @@
 
 #include <QRegularExpression>
 
+OrnVersion::OrnVersion()
+{
+
+}
+
 OrnVersion::OrnVersion(const QString &string)
 {
     auto slist = string.split(QRegularExpression(QStringLiteral("[.+~-]")));
@@ -15,6 +20,11 @@ OrnVersion::OrnVersion(const QString &string)
 
 bool OrnVersion::operator <(const OrnVersion &right)
 {
+    if (mParts == right.mParts)
+    {
+        return false;
+    }
+
     auto leftLength = mParts.length();
     auto rightLength = right.mParts.length();
     auto leftIsShorter = leftLength < rightLength;

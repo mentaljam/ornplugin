@@ -34,7 +34,8 @@ SOURCES += \
     src/orncategoryappsmodel.cpp \
     src/orninstalledappsmodel.cpp \
     src/ornzypp.cpp \
-    src/ornbookmarksmodel.cpp
+    src/ornbookmarksmodel.cpp \
+    src/ornbackup.cpp
 
 HEADERS += \
     src/orn_plugin.h \
@@ -58,7 +59,8 @@ HEADERS += \
     src/orncategoryappsmodel.h \
     src/orninstalledappsmodel.h \
     src/ornzypp.h \
-    src/ornbookmarksmodel.h
+    src/ornbookmarksmodel.h \
+    src/ornbackup.h
 
 OTHER_FILES += \
     scripts/update_categories.py

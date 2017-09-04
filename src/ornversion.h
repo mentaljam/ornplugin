@@ -6,6 +6,7 @@
 class OrnVersion
 {
 public:
+    OrnVersion();
     explicit OrnVersion(const QString &string);
 
     inline bool operator ==(const OrnVersion &right)

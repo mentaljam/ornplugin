@@ -7,9 +7,13 @@
 #include <PackageKit/packagekit-qt5/Transaction>
 
 class QDBusPendingCallWatcher;
+class QQmlEngine;
+class QJSEngine;
 
 class OrnZypp : public QObject
 {
+    friend class OrnBackup;
+
     Q_OBJECT
     Q_PROPERTY(bool updatesAvailable READ updatesAvailable NOTIFY updatesChanged)
 
@@ -70,6 +74,14 @@ public:
 
     static OrnZypp *instance();
 
+    static inline QObject *qmlInstance(QQmlEngine *engine, QJSEngine *scriptEngine)
+    {
+        Q_UNUSED(engine)
+        Q_UNUSED(scriptEngine)
+
+        return OrnZypp::instance();
+    }
+
     RepoStatus repoStatus(const QString &alias) const;
     RepoList repoList() const;
 
@@ -85,7 +97,7 @@ public:
 
     QString packageRepo(const QString &name) const;
 
-    Q_INVOKABLE static QString deviceModel();    
+    Q_INVOKABLE static QString deviceModel();
 
 signals:
     void installedAppsReady(const AppList &apps);
@@ -144,6 +156,9 @@ private:
     {
         bool enabled;
         QSet<QString> packages;
+
+        RepoMeta() {}
+        RepoMeta(bool isenabled);
     };
 
     bool mBusy;
@@ -155,7 +170,7 @@ private:
     QHash<QString, QString> mInstalledPackages;
     /// { name, package_id }
     QHash<QString, QString> mUpdates;
-    /// It's really a multihash { name, package_id_list }
+    /// { name, package_id_list }
     QMultiHash<QString, QString> mAvailablePackages;
 
     static OrnZypp *gInstance;

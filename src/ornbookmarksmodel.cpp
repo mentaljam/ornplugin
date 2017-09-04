@@ -3,33 +3,10 @@
 #include "ornclient.h"
 
 OrnBookmarksModel::OrnBookmarksModel(QObject *parent) :
-    OrnAbstractListModel(false, parent),
-    mClient(0)
+    OrnAbstractListModel(false, parent)
 {
-
-}
-
-OrnClient *OrnBookmarksModel::client() const
-{
-    return mClient;
-}
-
-void OrnBookmarksModel::setClient(OrnClient *client)
-{
-    if (mClient != client)
-    {
-        if (mClient)
-        {
-            disconnect(mClient, &OrnClient::bookmarkChanged, this, &OrnBookmarksModel::onBookmarkChanged);
-        }
-        mClient = client;
-        if (mClient)
-        {
-            connect(mClient, &OrnClient::bookmarkChanged, this, &OrnBookmarksModel::onBookmarkChanged);
-        }
-        emit this->clientChanged();
-        this->reset();
-    }
+    connect(OrnClient::instance(), &OrnClient::bookmarkChanged,
+            this, &OrnBookmarksModel::onBookmarkChanged);
 }
 
 void OrnBookmarksModel::onBookmarkChanged(quint32 appId, bool bookmarked)
@@ -95,11 +72,11 @@ QVariant OrnBookmarksModel::data(const QModelIndex &index, int role) const
 
 void OrnBookmarksModel::fetchMore(const QModelIndex &parent)
 {
-    if (parent.isValid() || !mClient)
+    if (parent.isValid())
     {
         return;
     }
-    for (const auto &appid : mClient->bookmarks())
+    for (const auto &appid : OrnClient::instance()->bookmarks())
     {
         this->addApp(appid);
     }

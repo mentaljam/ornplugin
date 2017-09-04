@@ -161,7 +161,7 @@ void OrnZypp::addRepo(const QString &author)
     connect(watcher, &QDBusPendingCallWatcher::finished, [this, alias]()
     {
         qDebug() << "Repo" << alias << "have been added";
-        mRepos.insert(alias, RepoMeta{ true, QSet<QString>() });
+        mRepos.insert(alias, RepoMeta(true));
         emit this->repoModified(alias, AddRepo);
     });
 }
@@ -384,10 +384,10 @@ void OrnZypp::onPackage(PackageKit::Transaction::Info info,
         mInstalledPackages.insert(name, packageId);
         break;
     case PackageKit::Transaction::InfoAvailable:
+        // Add package name to available packages if
+        // it's from an ORN repo or is installed
         if (repo.startsWith(repoNamePrefix))
         {
-            // Add package name to available packages if
-            // it's from an ORN repo or is installed
             mAvailablePackages.insertMulti(name, packageId);
         }
         else if (repo == installed)
@@ -577,7 +577,7 @@ void OrnZypp::pFetchRepos()
         {
             auto enabled = !disabled.contains(alias);
             qDebug() << "Found " << (enabled ? "enabled" : "disabled") << " repo" << alias;
-            mRepos.insert(alias, RepoMeta{ enabled, QSet<QString>() });
+            mRepos.insert(alias, RepoMeta(enabled));
             this->pFetchRepoPackages(alias);
         }
     }
@@ -634,7 +634,7 @@ QDBusPendingCallWatcher *OrnZypp::pDbusCall(const QString &method, const QVarian
     }
     qDebug() << "Calling" << call;
     auto pCall = QDBusConnection::systemBus().asyncCall(call);
-    auto watcher = new QDBusPendingCallWatcher(pCall, this);
+    auto watcher = new QDBusPendingCallWatcher(pCall);
     connect(watcher, &QDBusPendingCallWatcher::finished,
 #ifdef QT_DEBUG
             [watcher]()
@@ -652,3 +652,7 @@ QDBusPendingCallWatcher *OrnZypp::pDbusCall(const QString &method, const QVarian
             );
     return watcher;
 }
+
+OrnZypp::RepoMeta::RepoMeta(bool isenabled) :
+    enabled(isenabled)
+{}
