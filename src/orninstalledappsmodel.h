@@ -20,7 +20,9 @@ public:
         IconRole,
         SortRole,
         SectionRole,
-        UpdateAvailableRole
+        UpdateAvailableRole,
+        PackageIdRole,
+        UpdateIdRole
     };
     Q_ENUM(Roles)
 
@@ -31,6 +33,7 @@ public slots:
 
 private slots:
     void onInstalledAppsReady(const OrnZypp::AppList &apps);
+    void onPackageRemoved(const QString &packageId);
 
 private:
     OrnZypp::AppList mData;

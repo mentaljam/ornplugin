@@ -6,8 +6,11 @@
 OrnInstalledAppsModel::OrnInstalledAppsModel(QObject *parent) :
     QAbstractListModel(parent)
 {
-    connect(OrnZypp::instance(), &OrnZypp::installedAppsReady,
+    auto ornZypp = OrnZypp::instance();
+    connect(ornZypp, &OrnZypp::installedAppsReady,
             this, &OrnInstalledAppsModel::onInstalledAppsReady);
+    connect(ornZypp, &OrnZypp::packageRemoved,
+            this, &OrnInstalledAppsModel::onPackageRemoved);
     this->reset();
 }
 
@@ -30,6 +33,22 @@ void OrnInstalledAppsModel::onInstalledAppsReady(const OrnZypp::AppList &apps)
         qWarning() << "App list is empty";
     }
     this->endResetModel();
+}
+
+void OrnInstalledAppsModel::onPackageRemoved(const QString &packageId)
+{
+    auto name = packageId.section(QChar(';'), 0, 0);
+    auto size = mData.size();
+    for (OrnZypp::AppList::size_type i = 0; i < size; ++i)
+    {
+        if (mData[i].name == name)
+        {
+            this->beginRemoveRows(QModelIndex(), i, i);
+            mData.removeAt(i);
+            this->endInsertRows();
+            return;
+        }
+    }
 }
 
 int OrnInstalledAppsModel::rowCount(const QModelIndex &parent) const
@@ -65,6 +84,10 @@ QVariant OrnInstalledAppsModel::data(const QModelIndex &index, int role) const
     case UpdateAvailableRole:
         // Return int to make it easier to parse
         return (int)!app.updateId.isEmpty();
+    case PackageIdRole:
+        return app.packageId;
+    case UpdateIdRole:
+        return app.updateId;
     default:
         return QVariant();
     }
@@ -79,6 +102,8 @@ QHash<int, QByteArray> OrnInstalledAppsModel::roleNames() const
         { AuthorRole,  "appAuthor"     },
         { IconRole,    "appIconSource" },
         { SectionRole, "section"       },
-        { UpdateAvailableRole, "updateAvailable" }
+        { UpdateAvailableRole, "updateAvailable" },
+        { PackageIdRole, "packageId"     },
+        { UpdateIdRole,  "updateId"      },
     };
 }

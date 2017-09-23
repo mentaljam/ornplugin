@@ -45,6 +45,7 @@ public:
         QString version;
         QString author;
         QString icon;
+        QString packageId;
         QString updateId;
     };
 

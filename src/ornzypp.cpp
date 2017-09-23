@@ -324,7 +324,7 @@ void OrnZypp::removePackage(const QString &packageId)
         }
         emit this->packageRemoved(packageId);
     });
-    qDebug() << "Removing package" << packageId << "with" << t << "method installPackage()";
+    qDebug() << "Removing package" << packageId << "with" << t << "method removePackage()";
     t->removePackage(packageId);
 }
 
@@ -547,6 +547,7 @@ void OrnZypp::pInstalledApps()
             idParts[1],
             this->packageRepo(name).mid(repoNamePrefixLength),
             icon,
+            id,
             // The update package id or an empty string
             mUpdates.value(name)
         };
