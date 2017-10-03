@@ -121,11 +121,28 @@ void OrnBackup::pSearchPackages()
     // Delete future watcher and prepare variables
     this->sender()->deleteLater();
     mPackagesToInstall.clear();
+    mSearchIndex = 0;
 
-    auto t = mZypp->transaction();
+    auto t = new PackageKit::Transaction();
+    connect(t, &PackageKit::Transaction::errorCode, mZypp, &OrnZypp::pkError);
     connect(t, &PackageKit::Transaction::package, this, &OrnBackup::pAddPackage);
-    connect(t, &PackageKit::Transaction::finished, this, &OrnBackup::pInstallPackages);
-    t->searchNames(mNamesToSearch, PackageKit::Transaction::FilterNotInstalled);
+    // It seems that the PackageKit::Transaction::searchNames(QStringList, ...)
+    // does searches only for the first name so we use this hack
+    connect(t, &PackageKit::Transaction::finished, [this, t]()
+    {
+        ++mSearchIndex;
+        if (mSearchIndex < mNamesToSearch.size())
+        {
+            t->reset();
+            t->searchNames(mNamesToSearch[mSearchIndex]);
+        }
+        else
+        {
+            t->deleteLater();
+            this->pInstallPackages();
+        }
+    });
+    t->searchNames(mNamesToSearch[mSearchIndex]);
 }
 
 void OrnBackup::pAddPackage(int info, const QString &packageId, const QString &summary)
@@ -133,11 +150,20 @@ void OrnBackup::pAddPackage(int info, const QString &packageId, const QString &s
     Q_UNUSED(info)
     Q_UNUSED(summary)
     auto idParts = packageId.split(QChar(';'));
-    // Process only packages from OpenRepos
-    if (idParts.last().startsWith(OrnZypp::repoNamePrefix))
+    auto name = idParts.first();
+    if (mNamesToSearch.contains(name))
     {
-        // We will filter the newest versions later
-        mPackagesToInstall.insertMulti(idParts.first(), packageId);
+        auto repo = idParts.last();
+        // Process only packages from OpenRepos
+        if (repo.startsWith(OrnZypp::repoNamePrefix))
+        {
+            // We will filter the newest versions later
+            mPackagesToInstall.insert(name, packageId);
+        }
+        else if (repo == QStringLiteral("installed"))
+        {
+            mInstalled.insert(name, idParts[1]);
+        }
     }
 }
 
@@ -161,7 +187,11 @@ void OrnBackup::pInstallPackages()
                 newestId = pid;
             }
         }
-        ids << newestId;
+        // Skip packages that are already installed
+        if (!mInstalled.contains(pname) || OrnVersion(mInstalled[pname]) < newestVersion)
+        {
+            ids << newestId;
+        }
     }
 
     if (ids.isEmpty())
@@ -279,6 +309,7 @@ void OrnBackup::pRefreshRepos()
     this->setStatus(RefreshingRepos);
     auto t = new PackageKit::Transaction();
     connect(t, &PackageKit::Transaction::finished, t, &PackageKit::Transaction::deleteLater);
+    connect(t, &PackageKit::Transaction::errorCode, mZypp, &OrnZypp::pkError);
     connect(t, &PackageKit::Transaction::finished, this, &OrnBackup::pSearchPackages);
     t->refreshCache(false);
 }

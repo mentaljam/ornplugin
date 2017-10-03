@@ -65,8 +65,11 @@ private:
 private:
     OrnZypp *mZypp;
     Status mStatus;
+    QStringList::size_type mSearchIndex;
     QString mFilePath;
     QStringList mNamesToSearch;
+    // Name, version
+    QHash<QString, QString> mInstalled;
     QMultiHash<QString, QString> mPackagesToInstall;
 };
 
