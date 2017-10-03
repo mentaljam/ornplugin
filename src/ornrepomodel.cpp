@@ -11,6 +11,7 @@ OrnRepoModel::OrnRepoModel(QObject *parent) :
 
     connect(ornZypp, &OrnZypp::endRepoFetching, this, &OrnRepoModel::reset);
     connect(ornZypp, &OrnZypp::repoModified, this, &OrnRepoModel::onRepoModified);
+    connect(this, &OrnRepoModel::modelReset, this, &OrnRepoModel::enabledReposChanged);
 
     // Delay reset to ensure that modelReset signal is received in qml
     QTimer::singleShot(500, this, &OrnRepoModel::reset);
