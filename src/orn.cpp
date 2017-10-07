@@ -2,26 +2,13 @@
 
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QStandardPaths>
+#include <QDir>
 
 #include <QDebug>
 
 namespace Orn
 {
-
-quint32 toUint(const QJsonValue &value)
-{
-    return value.toString().remove(QChar(',')).toUInt();
-}
-
-QString toString(const QJsonValue &value)
-{
-    return value.toString().trimmed();
-}
-
-QDateTime toDateTime(const QJsonValue &value)
-{
-    return QDateTime::fromMSecsSinceEpoch((quint64)toUint(value) * 1000);
-}
 
 QList<quint32> toIntList(const QJsonValue &value)
 {
@@ -33,6 +20,17 @@ QList<quint32> toIntList(const QJsonValue &value)
         list << toUint(v.toObject()[tidKey]);
     }
     return list;
+}
+
+QString locate(const QString &filename)
+{
+    auto dir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+    if (!dir.exists() && !dir.mkpath(QChar('.')))
+    {
+        qWarning() << "Could not create local data dir" << dir.path();
+        return QString();
+    }
+    return dir.absoluteFilePath(filename);
 }
 
 } // namespace Orn

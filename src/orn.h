@@ -7,13 +7,24 @@
 namespace Orn
 {
 
-quint32 toUint(const QJsonValue &value);
+inline quint32 toUint(const QJsonValue &value)
+{
+    return value.toString().remove(QChar(',')).toUInt();
+}
 
-QString toString(const QJsonValue &value);
+inline QString toString(const QJsonValue &value)
+{
+    return value.toString().trimmed();
+}
 
-QDateTime toDateTime(const QJsonValue &value);
+inline QDateTime toDateTime(const QJsonValue &value)
+{
+    return QDateTime::fromMSecsSinceEpoch(quint64(toUint(value)) * 1000);
+}
 
 QList<quint32> toIntList(const QJsonValue &value);
+
+QString locate(const QString &filename);
 
 } // namespace Orn
 
