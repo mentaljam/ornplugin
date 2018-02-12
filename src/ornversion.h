@@ -8,20 +8,21 @@ class OrnVersion
 public:
     OrnVersion();
     explicit OrnVersion(const QString &string);
+    OrnVersion(const OrnVersion &other);
 
-    inline bool operator ==(const OrnVersion &right)
-    {
-        return mParts == right.mParts;
-    }
+    QString toString() const;
 
-    bool operator <(const OrnVersion &right);
+    void operator =(const OrnVersion &other);
 
-    inline bool operator >(const OrnVersion &right)
+    bool operator ==(const OrnVersion &right) const;
+    bool operator <(const OrnVersion &right) const;
+    inline bool operator >(const OrnVersion &right) const
     {
         return !this->operator <(right);
     }
 
 private:
+    QString mOrigin;
     QVariantList mParts;
 };
 

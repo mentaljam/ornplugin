@@ -8,6 +8,7 @@ OrnVersion::OrnVersion()
 }
 
 OrnVersion::OrnVersion(const QString &string)
+    : mOrigin(string)
 {
     auto slist = string.split(QRegularExpression(QStringLiteral("[.+~-]")));
     bool ok;
@@ -18,7 +19,30 @@ OrnVersion::OrnVersion(const QString &string)
     }
 }
 
-bool OrnVersion::operator <(const OrnVersion &right)
+OrnVersion::OrnVersion(const OrnVersion &other)
+    : mOrigin(other.mOrigin)
+    , mParts(other.mParts)
+{
+
+}
+
+QString OrnVersion::toString() const
+{
+    return mOrigin;
+}
+
+void OrnVersion::operator =(const OrnVersion &other)
+{
+    mOrigin = other.mOrigin;
+    mParts = other.mParts;
+}
+
+bool OrnVersion::operator ==(const OrnVersion &right) const
+{
+    return mOrigin == right.mOrigin;
+}
+
+bool OrnVersion::operator <(const OrnVersion &right) const
 {
     if (mParts == right.mParts)
     {
