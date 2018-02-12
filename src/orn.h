@@ -26,6 +26,26 @@ QList<quint32> toIntList(const QJsonValue &value);
 
 QString locate(const QString &filename);
 
+inline QString packageName(const QString &id)
+{
+    return id.section(QChar(';'), 0, 0);
+}
+
+inline QString packageVersion(const QString &id)
+{
+    return id.section(QChar(';'), 1, 1);
+}
+
+inline QString packageArch(const QString &id)
+{
+    return id.section(QChar(';'), 2, 2);
+}
+
+inline QString packageRepo(const QString &id)
+{
+    return id.section(QChar(';'), 3, 3);
+}
+
 } // namespace Orn
 
 #endif // ORN_H
