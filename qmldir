@@ -1,0 +1,3 @@
+module harbour.orn
+plugin ornplugin
+classname OrnPlugin

@@ -7,7 +7,7 @@ VERSION = 0.1
 
 TARGET = $$qtLibraryTarget($$TARGET)
 
-uri = harbour.orn
+QMAKE_MOC_OPTIONS += -Muri=harbour.orn
 
 DEFINES += \
     ORN_LIB_VERSION=\\\"$$VERSION\\\"
@@ -63,4 +63,5 @@ HEADERS += \
     src/ornbackup.h
 
 OTHER_FILES += \
+    qmldir \
     scripts/update_categories.py
