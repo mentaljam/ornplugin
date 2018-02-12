@@ -9,7 +9,7 @@ class OrnSearchAppsModel : public OrnAbstractAppsModel
     Q_PROPERTY(QString searchKey READ searchKey WRITE setSearchKey NOTIFY searchKeyChanged)
 
 public:
-    explicit OrnSearchAppsModel(QObject *parent = 0);
+    explicit OrnSearchAppsModel(QObject *parent = nullptr);
 
     QString searchKey() const;
     void setSearchKey(const QString &searchKey);

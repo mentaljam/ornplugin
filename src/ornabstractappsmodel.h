@@ -17,7 +17,7 @@ public:
     };
     Q_ENUM(Roles)
 
-    OrnAbstractAppsModel(bool fetchable, QObject *parent = 0);
+    OrnAbstractAppsModel(bool fetchable, QObject *parent = nullptr);
 
     // QAbstractItemModel interface
 public:

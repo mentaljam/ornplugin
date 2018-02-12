@@ -11,7 +11,7 @@ class OrnCategoriesModel : public OrnAbstractListModel
 {
     Q_OBJECT
 public:
-    explicit OrnCategoriesModel(QObject *parent = 0);
+    explicit OrnCategoriesModel(QObject *parent = nullptr);
 
     // QAbstractItemModel interface
 public:

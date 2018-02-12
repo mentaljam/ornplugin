@@ -1,7 +1,7 @@
 #include "orn_plugin.h"
 #include "ornapirequest.h"
 #include "ornclient.h"
-#include "ornzypp.h"
+#include "ornpm.h"
 #include "ornapplication.h"
 #include "ornapplistitem.h"
 #include "orncommentlistitem.h"
@@ -16,13 +16,13 @@
 #include "orncommentsmodel.h"
 #include "orncategoriesmodel.h"
 #include "ornbookmarksmodel.h"
-#include "ornbackup.h"
+//#include "ornbackup.h"
 
 #include <qqml.h>
 #include <QNetworkAccessManager>
 
 /// The global pointer to the instance of network access manager
-QNetworkAccessManager *ornNetworkAccessManager = 0;
+QNetworkAccessManager *ornNetworkAccessManager = nullptr;
 
 void OrnPlugin::registerTypes(const char *uri)
 {
@@ -44,11 +44,11 @@ void OrnPlugin::registerTypes(const char *uri)
     qmlRegisterType<OrnCommentsModel>     (uri, 1, 0, "OrnCommentsModel");
     qmlRegisterType<OrnCategoriesModel>   (uri, 1, 0, "OrnCategoriesModel");
     qmlRegisterType<OrnBookmarksModel>    (uri, 1, 0, "OrnBookmarksModel");
-    qmlRegisterType<OrnBackup>            (uri, 1, 0, "OrnBackup");
+//    qmlRegisterType<OrnBackup>            (uri, 1, 0, "OrnBackup");
 
     qmlRegisterSingletonType<OrnClient>   (uri, 1, 0, "OrnClient", OrnClient::qmlInstance);
-    qmlRegisterSingletonType<OrnZypp>     (uri, 1, 0, "OrnZypp", OrnZypp::qmlInstance);
+    qmlRegisterSingletonType<OrnPm>       (uri, 1, 0, "OrnPm",     OrnPm::qmlInstance);
 
-    qRegisterMetaType<OrnZypp::AppList>("AppList");
-    qRegisterMetaType<OrnZypp::RepoList>("RepoList");
+    qRegisterMetaType<QList<OrnInstalledPackage>>();
+    qRegisterMetaType<QList<OrnPackageVersion>>();
 }

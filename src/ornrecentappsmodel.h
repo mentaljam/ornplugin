@@ -8,7 +8,7 @@ class OrnRecentAppsModel : public OrnAbstractAppsModel
     Q_OBJECT
 
 public:
-    explicit OrnRecentAppsModel(QObject *parent = 0);
+    explicit OrnRecentAppsModel(QObject *parent = nullptr);
 
     // QAbstractItemModel interface
 public:

@@ -12,7 +12,7 @@ class OrnCommentsModel : public OrnAbstractListModel
     Q_PROPERTY(quint32 appId READ appId WRITE setAppId NOTIFY appIdChanged)
 
 public:
-    explicit OrnCommentsModel(QObject *parent = 0);
+    explicit OrnCommentsModel(QObject *parent = nullptr);
 
     quint32 appId() const;
     void setAppId(const quint32 &appId);

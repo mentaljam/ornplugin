@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDateTime>
+
 #include <QDebug>
 
 OrnAppListItem::OrnAppListItem(QObject *parent) :

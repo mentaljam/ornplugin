@@ -1,6 +1,5 @@
 #include "ornapplication.h"
 #include "orn.h"
-#include "ornversion.h"
 #include "orncategorylistitem.h"
 
 #include <QUrl>
@@ -10,29 +9,51 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFileInfo>
-#include <QTimer>
 
 #include <QDebug>
 
-OrnApplication::OrnApplication(QObject *parent) :
-    OrnApiRequest(parent),
-    mRepoStatus(OrnZypp::RepoNotInstalled),
-    mAppId(0),
-    mUserId(0),
-    mRatingCount(0),
-    mCommentsCount(0),
-    mRating(0.0)
+
+#ifdef QT_DEBUG
+QDebug operator<<(QDebug dbg, const OrnApplication *app)
+{
+    dbg.nospace() << "OrnApplication(" << (void*)app << ", ";
+    if (!app->mPackageName.isEmpty())
+    {
+        dbg << app->mPackageName;
+    }
+    else
+    {
+        dbg << app->mAppId;
+    }
+    dbg << ')';
+    return dbg.space();
+}
+#endif
+
+OrnApplication::OrnApplication(QObject *parent)
+    : OrnApiRequest(parent)
+    , mRepoStatus(OrnPm::RepoUnknownStatus)
+    , mPackageStatus(OrnPm::PackageUnknownStatus)
+    , mAppId(0)
+    , mUserId(0)
+    , mRatingCount(0)
+    , mCommentsCount(0)
+    , mRating(0.0)
 {
     connect(this, &OrnApplication::jsonReady, this, &OrnApplication::onJsonReady);
 
-    auto ornZypp = OrnZypp::instance();
-    connect(ornZypp, &OrnZypp::endRepoFetching, this, &OrnApplication::onReposChanged);
-    connect(ornZypp, &OrnZypp::repoModified, this, &OrnApplication::onReposChanged);
-    connect(ornZypp, &OrnZypp::availablePackagesChanged, this, &OrnApplication::onAvailablePackagesChanged);
-    connect(ornZypp, &OrnZypp::installedPackagesChanged, this, &OrnApplication::onInstalledPackagesChanged);
-    connect(ornZypp, &OrnZypp::updatesChanged, this, &OrnApplication::updateAvailableChanged);
-    connect(ornZypp, &OrnZypp::packageInstalled, this, &OrnApplication::onPackageInstalled);
-    connect(ornZypp, &OrnZypp::packageRemoved, this, &OrnApplication::onPackageRemoved);
+    auto ornPm = OrnPm::instance();
+    connect(ornPm, &OrnPm::repoModified, this, &OrnApplication::onRepoListChanged);
+    connect(ornPm, &OrnPm::packageStatusChanged, this, &OrnApplication::onPackageStatusChanged);
+    connect(ornPm, &OrnPm::updatablePackagesChanged, [this, ornPm]()
+    {
+        if (mPackageName.size())
+        {
+            ornPm->getPackageVersions(mPackageName);
+        }
+    });
+
+    connect(ornPm, &OrnPm::packageVersions, this, &OrnApplication::onPackageVersions);
 }
 
 quint32 OrnApplication::appId() const
@@ -49,9 +70,73 @@ void OrnApplication::setAppId(const quint32 &appId)
     }
 }
 
-bool OrnApplication::updateAvailable() const
+QString OrnApplication::installedVersion() const
 {
-    return OrnZypp::instance()->hasUpdate(mPackageName);
+    return mInstalledVersion.version;
+}
+
+quint64 OrnApplication::installedVersionSize() const
+{
+    return mInstalledVersion.installSize;
+}
+
+QString OrnApplication::installedId() const
+{
+    if (mPackageName.isEmpty())
+    {
+        return QString();
+    }
+    return mInstalledVersion.packageId(mPackageName);
+}
+
+QString OrnApplication::availableVersion() const
+{
+    return mAvailableVersion.version;
+}
+
+bool OrnApplication::availableVersionIsNewer() const
+{
+    return mInstalledVersion < mAvailableVersion;
+}
+
+quint64 OrnApplication::availableVersionDownloadSize() const
+{
+    return mAvailableVersion.downloadSize;
+}
+
+quint64 OrnApplication::availableVersionInstallSize() const
+{
+    return mAvailableVersion.installSize;
+}
+
+QString OrnApplication::availableId() const
+{
+    if (mPackageName.isEmpty())
+    {
+        return QString();
+    }
+    return mAvailableVersion.packageId(mPackageName);
+}
+
+QString OrnApplication::globalVersion() const
+{
+    return mGlobalVersion.version;
+}
+
+bool OrnApplication::globalVersionIsNewer() const
+{
+    return mAvailableVersion < mGlobalVersion &&
+           mInstalledVersion < mGlobalVersion;
+}
+
+quint64 OrnApplication::globalVersionDownloadSize() const
+{
+    return mGlobalVersion.downloadSize;
+}
+
+quint64 OrnApplication::globalVersionInstallSize() const
+{
+    return mGlobalVersion.installSize;
 }
 
 bool OrnApplication::canBeLaunched() const
@@ -62,10 +147,10 @@ bool OrnApplication::canBeLaunched() const
 QString OrnApplication::category() const
 {
     return mCategories.empty() ? QString() :
-                mCategories.last().toMap().value("name").toString();
+                                 mCategories.last().toMap().value("name").toString();
 }
 
-void OrnApplication::update()
+void OrnApplication::ornRequest()
 {
     auto url = OrnApiRequest::apiUrl(QStringLiteral("apps/%0").arg(mAppId));
     auto request = OrnApiRequest::networkRequest();
@@ -73,30 +158,14 @@ void OrnApplication::update()
     this->run(request);
 }
 
-void OrnApplication::install()
-{
-    if (!mAvailablePackageId.isEmpty())
-    {
-        OrnZypp::instance()->installPackage(mAvailablePackageId);
-    }
-}
-
-void OrnApplication::remove()
-{
-    if (!mInstalledPackageId.isEmpty())
-    {
-        OrnZypp::instance()->removePackage(mAvailablePackageId);
-    }
-}
-
 void OrnApplication::launch()
 {
     if (mDesktopFile.isEmpty())
     {
-        qDebug() << "Application" << mPackageName << "could not be launched";
+        qWarning() << this << ": no desktop file";
         return;
     }
-    qDebug() << "Launching" << mDesktopFile;
+    qDebug() << this << ": launching" << mDesktopFile;
     QDesktopServices::openUrl(QUrl::fromLocalFile(mDesktopFile));
 }
 
@@ -153,147 +222,163 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     if (!mUserName.isEmpty())
     {
         // Generate repository name
-        mRepoAlias = OrnZypp::repoNamePrefix + mUserName;
-        // Check if repository is enabled
-        this->onReposChanged();
+        mRepoAlias = OrnPm::repoNamePrefix + mUserName;
+        // Update the repository and package information
+        this->onRepoListChanged();
     }
     else
     {
+        qCritical() << this << ": no user name in the responce - the repository and "
+                               "package information could not be updated!";
         mRepoAlias.clear();
     }
 
-    qDebug() << "Application" << mPackageName << "information updated";
-    this->onInstalledPackagesChanged();
-    emit this->updated();
+    if (!mPackageName.isEmpty())
+    {
+        qDebug() << this << ": information updated";
+    }
+    else
+    {
+        qWarning() << this << ": information updated but it doesn't have any package name!";
+    }
+
+    emit this->ornRequestFinished();
 }
 
-void OrnApplication::onReposChanged()
+void OrnApplication::onRepoListChanged()
 {
     if (mRepoAlias.isEmpty())
     {
         return;
     }
 
-    auto repoStatus = OrnZypp::instance()->repoStatus(mRepoAlias);
+    auto ornPm = OrnPm::instance();
+    auto repoStatus = ornPm->repoStatus(mRepoAlias);
     if (mRepoStatus != repoStatus)
     {
-        qDebug() << mPackageName << "repo" << mRepoAlias << "status is" << repoStatus;
+        bool hasPackage = !mPackageName.isEmpty();
+        qDebug() << this << ": repository" << mRepoAlias << "status changed to" << repoStatus;
         mRepoStatus = repoStatus;
         emit this->repoStatusChanged();
-        this->onAvailablePackagesChanged();
+
+        if (hasPackage)
+        {
+            auto packageStatus = ornPm->packageStatus(mPackageName);
+            if (mPackageStatus != packageStatus)
+            {
+                mPackageStatus = packageStatus;
+                emit this->packageStatusChanged();
+                this->updateDesktopFile();
+            }
+
+            ornPm->getPackageVersions(mPackageName);
+        }
+        else
+        {
+            mPackageStatus = OrnPm::PackageNotInstalled;
+            emit this->packageStatusChanged();
+        }
     }
 }
 
-void OrnApplication::onAvailablePackagesChanged()
+void OrnApplication::onPackageStatusChanged(const QString &packageName,
+                                            const OrnPm::PackageStatus &status)
 {
-    if (mPackageName.isEmpty() || mRepoAlias.isEmpty())
+    if (mPackageName == packageName &&
+        mPackageStatus != status)
+    {
+        qDebug() << this << ": status changed to" << status;
+        mPackageStatus = status;
+        emit this->packageStatusChanged();
+        OrnPm::instance()->getPackageVersions(mPackageName);
+        this->updateDesktopFile();
+    }
+}
+
+void OrnApplication::onPackageVersions(const QString &packageName, const OrnPackageVersionList &versions)
+{
+    if (mPackageName != packageName)
     {
         return;
     }
 
-    auto ornZypp = OrnZypp::instance();
-    if (ornZypp->isAvailable(mPackageName))
+    bool availableNewer = this->availableVersionIsNewer();
+    bool globalNewer    = this->globalVersionIsNewer();
+
+    bool seekInstalled = true;
+    bool seekAvailable = true;
+    bool seekGlobal    = true;
+
+    QLatin1String installed("installed");
+    for (const auto &version : versions)
     {
-        auto ids = ornZypp->availablePackages(mPackageName);
-        auto newest = mAvailableVersion;
-        QString newestId;
-        for (const auto &id : ids)
+        if (version.repoAlias == installed)
         {
-            auto idParts = id.split(QChar(';'));
-            auto repo = idParts.last();
-            if (repo == mRepoAlias || repo == OrnZypp::installed)
+            if (seekInstalled && mInstalledVersion != version)
             {
-                // Install packages only from current repo
-                auto version = idParts[1];
-                if (OrnVersion(newest) < OrnVersion(version))
-                {
-                    newest = version;
-                    newestId = id;
-                }
+                mInstalledVersion = version;
+                emit this->installedVersionChanged();
+                seekInstalled = false;
             }
         }
-        if (mAvailableVersion != newest)
+        else if (version.repoAlias == mRepoAlias)
         {
-            mAvailableVersion = newest;
-            mAvailablePackageId = newestId;
-            emit this->availableVersionChanged();
+            if (seekAvailable && mAvailableVersion != version)
+            {
+                mAvailableVersion = version;
+                emit this->availableVersionChanged();
+                if (mPackageStatus < OrnPm::PackageAvailable)
+                {
+                    mPackageStatus = OrnPm::PackageAvailable;
+                    emit this->packageStatusChanged();
+                }
+                seekAvailable = false;
+            }
+        }
+        else if (seekGlobal && mGlobalVersion != version)
+        {
+            mGlobalVersion = version;
+            emit this->globalVersionChanged();
+            seekGlobal = false;
+        }
+        if (!seekInstalled && !seekAvailable && !seekGlobal)
+        {
+            break;
         }
     }
-    else if (!mAvailableVersion.isEmpty())
+
+    if (this->availableVersionIsNewer() != availableNewer)
     {
-        mAvailableVersion.clear();
-        mAvailablePackageId.clear();
-        emit this->availableVersionChanged();
-        emit this->appNotFound();
+        emit this->availableVersionIsNewerChanged();
+    }
+    if (this->globalVersionIsNewer() != globalNewer)
+    {
+        emit this->globalVersionIsNewerChanged();
     }
 }
 
-void OrnApplication::onInstalledPackagesChanged()
-{
-    if (mPackageName.isEmpty())
-    {
-        return;
-    }
-
-    auto ornZypp = OrnZypp::instance();
-    if (ornZypp->isInstalled(mPackageName))
-    {
-        auto id = ornZypp->installedPackage(mPackageName);
-        auto version = PackageKit::Transaction::packageVersion(id);
-        if (mInstalledVersion != version)
-        {
-            mInstalledVersion = version;
-            mInstalledPackageId = id;
-            emit this->installedVersionChanged();
-        }
-    }
-    else if (!mInstalledVersion.isEmpty())
-    {
-        mInstalledVersion.clear();
-        mInstalledPackageId.clear();
-        emit this->installedVersionChanged();
-    }
-    this->checkDesktopFile();
-}
-
-void OrnApplication::onPackageInstalled(const QString &packageId)
-{
-    if (PackageKit::Transaction::packageName(packageId) == mPackageName)
-    {
-        emit this->installed();
-    }
-}
-
-void OrnApplication::onPackageRemoved(const QString &packageId)
-{
-    if (PackageKit::Transaction::packageName(packageId) == mPackageName)
-    {
-        emit this->removed();
-    }
-}
-
-void OrnApplication::checkDesktopFile()
+void OrnApplication::updateDesktopFile()
 {
     auto desktopFile = mDesktopFile;
-    if (mPackageName.isEmpty() || mInstalledPackageId.isEmpty())
+    if (mPackageStatus == OrnPm::PackageInstalled)
     {
-        desktopFile.clear();
+        desktopFile = QStandardPaths::locate(
+                    QStandardPaths::ApplicationsLocation, mPackageName + ".desktop");
     }
     else
     {
-        auto desktopFiles = PackageKit::Transaction::packageDesktopFiles(mPackageName);
-        for (const auto &file : desktopFiles)
-        {
-            if (QFileInfo(file).isFile())
-            {
-                desktopFile = file;
-                break;
-            }
-        }
+        desktopFile.clear();
     }
     if (mDesktopFile != desktopFile)
     {
-        qDebug() << "Using desktop file" << desktopFile;
+        if (desktopFile.size())
+        {
+            qDebug() << this << ": using desktop file" << desktopFile;
+        }
+        else
+        {
+            qDebug() << this << ": no desktop file was found";
+        }
         mDesktopFile = desktopFile;
         emit this->canBeLaunchedChanged();
     }

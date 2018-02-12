@@ -17,7 +17,7 @@ public:
     };
     Q_ENUM(Roles)
 
-    explicit OrnBookmarksModel(QObject *parent = 0);
+    explicit OrnBookmarksModel(QObject *parent = nullptr);
 
 private slots:
     void onBookmarkChanged(quint32 appId, bool bookmarked);

@@ -1,16 +1,18 @@
 #include "ornrepomodel.h"
+#include "ornpm.h"
 
 #include <QTimer>
 #include <QDebug>
 
-OrnRepoModel::OrnRepoModel(QObject *parent) :
-    QAbstractListModel(parent),
-    mEnabledRepos(0)
+OrnRepoModel::OrnRepoModel(QObject *parent)
+    : QAbstractListModel(parent)
+    , mEnabledRepos(0)
 {
-    auto ornZypp = OrnZypp::instance();
+    auto ornPm = OrnPm::instance();
 
-    connect(ornZypp, &OrnZypp::endRepoFetching, this, &OrnRepoModel::reset);
-    connect(ornZypp, &OrnZypp::repoModified, this, &OrnRepoModel::onRepoModified);
+    connect(ornPm, &OrnPm::initialisedChanged, this, &OrnRepoModel::reset);
+    connect(ornPm, &OrnPm::enableReposFinished, this, &OrnRepoModel::reset);
+    connect(ornPm, &OrnPm::repoModified, this, &OrnRepoModel::onRepoModified);
     connect(this, &OrnRepoModel::modelReset, this, &OrnRepoModel::enabledReposChanged);
 
     // Delay reset to ensure that modelReset signal is received in qml
@@ -33,7 +35,7 @@ void OrnRepoModel::reset()
     this->beginResetModel();
     mData.clear();
 
-    auto repos = OrnZypp::instance()->repoList();
+    auto repos = OrnPm::instance()->repoList();
     auto size = repos.size();
     int enabledRepos = 0;
     if (size)
@@ -54,13 +56,15 @@ void OrnRepoModel::reset()
     this->endResetModel();
 }
 
-void OrnRepoModel::onRepoModified(const QString &alias, const OrnZypp::RepoAction &action)
+void OrnRepoModel::onRepoModified(const QString &alias, const int &action)
 {
-    if (action == OrnZypp::AddRepo)
+    QModelIndex parentIndex;
+
+    if (action == OrnPm::AddRepo)
     {
         auto row = mData.size();
-        this->beginInsertRows(QModelIndex(), row, row);
-        mData << OrnZypp::Repo{ true, alias, alias.mid(OrnZypp::repoNamePrefixLength) };
+        this->beginInsertRows(parentIndex, row, row);
+        mData << OrnRepo{ true, alias, alias.mid(OrnPm::repoNamePrefix.size()) };
         ++mEnabledRepos;
         emit this->enabledReposChanged();
         this->endInsertRows();
@@ -74,17 +78,17 @@ void OrnRepoModel::onRepoModified(const QString &alias, const OrnZypp::RepoActio
         {
             switch (action)
             {
-            case OrnZypp::RemoveRepo:
-                this->beginRemoveRows(QModelIndex(), row, row);
+            case OrnPm::RemoveRepo:
+                this->beginRemoveRows(parentIndex, row, row);
                 mData.removeAt(row);
                 --mEnabledRepos;
                 emit this->enabledReposChanged();
                 this->endRemoveRows();
                 break;
-            case OrnZypp::DisableRepo:
-            case OrnZypp::EnableRepo:
+            case OrnPm::DisableRepo:
+            case OrnPm::EnableRepo:
                 {
-                    bool enable = action == OrnZypp::EnableRepo;
+                    bool enable = action == OrnPm::EnableRepo;
                     if (repo.enabled != enable)
                     {
                         repo.enabled = enable;

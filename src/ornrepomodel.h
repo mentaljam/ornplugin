@@ -3,7 +3,7 @@
 
 #include <QAbstractListModel>
 
-#include "ornzypp.h"
+#include "ornrepo.h"
 
 class OrnRepoModel : public QAbstractListModel
 {
@@ -22,7 +22,7 @@ public:
     };
     Q_ENUM(Roles)
 
-    explicit OrnRepoModel(QObject *parent = 0);
+    explicit OrnRepoModel(QObject *parent = nullptr);
 
     bool hasEnabledRepos() const;
     bool hasDisabledRepos() const;
@@ -34,11 +34,11 @@ signals:
     void enabledReposChanged();
 
 private slots:
-    void onRepoModified(const QString &alias, const OrnZypp::RepoAction &action);
+    void onRepoModified(const QString &alias, const int &action);
 
 private:
     int mEnabledRepos;
-    OrnZypp::RepoList mData;
+    OrnRepoList mData;
 
     // QAbstractItemModel interface
 public:

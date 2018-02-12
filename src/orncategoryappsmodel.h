@@ -9,7 +9,7 @@ class OrnCategoryAppsModel : public OrnAbstractAppsModel
     Q_PROPERTY(quint32 categoryId READ categoryId WRITE setCategoryId NOTIFY categoryIdChanged)
 
 public:
-    explicit OrnCategoryAppsModel(QObject *parent = 0);
+    explicit OrnCategoryAppsModel(QObject *parent = nullptr);
 
     quint32 categoryId() const;
     void setCategoryId(const quint32 &categoryId);

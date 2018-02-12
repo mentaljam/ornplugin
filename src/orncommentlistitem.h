@@ -19,8 +19,8 @@ class OrnCommentListItem : public QObject
     Q_PROPERTY(QString date MEMBER mDate CONSTANT)
 
 public:
-    explicit OrnCommentListItem(QObject *parent = 0);
-    OrnCommentListItem(const QJsonObject &jsonObject, QObject *parent = 0);
+    explicit OrnCommentListItem(QObject *parent = nullptr);
+    OrnCommentListItem(const QJsonObject &jsonObject, QObject *parent = nullptr);
 
 private:
     static QString sinceCreated(const quint64 &created);

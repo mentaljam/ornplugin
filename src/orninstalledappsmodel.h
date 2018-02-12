@@ -3,7 +3,7 @@
 
 #include <QAbstractListModel>
 
-#include "ornzypp.h"
+#include "orninstalledpackage.h"
 
 class OrnInstalledAppsModel : public QAbstractListModel
 {
@@ -16,27 +16,27 @@ public:
         NameRole = Qt::UserRole + 1,
         TitleRole,
         VersionRole,
-        AuthorRole,
         IconRole,
         SortRole,
         SectionRole,
-        UpdateAvailableRole,
-        PackageIdRole,
-        UpdateIdRole
+        UpdateAvailableRole
     };
     Q_ENUM(Roles)
 
-    explicit OrnInstalledAppsModel(QObject *parent = 0);
+    explicit OrnInstalledAppsModel(QObject *parent = nullptr);
 
 public slots:
     void reset();
 
 private slots:
-    void onInstalledAppsReady(const OrnZypp::AppList &apps);
-    void onPackageRemoved(const QString &packageId);
+    void onInstalledPackages(const OrnInstalledPackageList &packages);
+    void onPackageInstalled(const QString &packageName);
+    void onPackageRemoved(const QString &packageName);
+    void onUpdatablePackagesChanged();
 
 private:
-    OrnZypp::AppList mData;
+    bool mResetting;
+    OrnInstalledPackageList mData;
 
     // QAbstractItemModel interface
 public:

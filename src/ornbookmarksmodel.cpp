@@ -39,14 +39,14 @@ void OrnBookmarksModel::addApp(const quint32 &appId)
     qDebug() << "Adding app" << appId << "to bookmarks model";
     auto app = new OrnApplication(this);
     app->setAppId(appId);
-    connect(app, &OrnApplication::updated, [=]()
+    connect(app, &OrnApplication::ornRequestFinished, [=]()
     {
         auto s = mData.size();
         this->beginInsertRows(QModelIndex(), s, s);
         mData << app;
         this->endInsertRows();
     });
-    app->update();
+    app->ornRequest();
 }
 
 QVariant OrnBookmarksModel::data(const QModelIndex &index, int role) const

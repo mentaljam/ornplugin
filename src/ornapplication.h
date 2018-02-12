@@ -2,7 +2,8 @@
 #define ORNAPPLICATION_H
 
 #include "ornapirequest.h"
-#include "ornzypp.h"
+#include "ornpm.h"
+#include "ornpackageversion.h"
 
 #include <QDateTime>
 
@@ -10,41 +11,69 @@ class OrnApplication : public OrnApiRequest
 {
     friend class OrnBookmarksModel;
 
+#ifdef QT_DEBUG
+    friend QDebug operator<<(QDebug dbg, const OrnApplication *app);
+#endif
+
     Q_OBJECT
 
     Q_PROPERTY(bool canBeLaunched READ canBeLaunched NOTIFY canBeLaunchedChanged)
-    Q_PROPERTY(bool updateAvailable READ updateAvailable NOTIFY updateAvailableChanged)
-    Q_PROPERTY(OrnZypp::RepoStatus repoStatus MEMBER mRepoStatus NOTIFY repoStatusChanged)
-    Q_PROPERTY(QString installedVersion MEMBER mInstalledVersion NOTIFY installedVersionChanged)
-    Q_PROPERTY(QString availableVersion MEMBER mAvailableVersion NOTIFY availableVersionChanged)
-    Q_PROPERTY(QString repoAlias MEMBER mRepoAlias NOTIFY updated)
+    Q_PROPERTY(OrnPm::RepoStatus repoStatus MEMBER mRepoStatus NOTIFY repoStatusChanged)
+    Q_PROPERTY(OrnPm::PackageStatus packageStatus MEMBER mPackageStatus NOTIFY packageStatusChanged)
+    Q_PROPERTY(QString repoAlias MEMBER mRepoAlias NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString installedVersion READ installedVersion NOTIFY installedVersionChanged)
+    Q_PROPERTY(quint64 installedVersionSize READ installedVersionSize NOTIFY installedVersionChanged)
+    Q_PROPERTY(QString installedId READ installedId NOTIFY installedVersionChanged)
+    Q_PROPERTY(QString availableVersion READ availableVersion NOTIFY availableVersionChanged)
+    Q_PROPERTY(bool availableVersionIsNewer READ availableVersionIsNewer NOTIFY availableVersionIsNewerChanged)
+    Q_PROPERTY(quint64 availableVersionDownloadSize READ availableVersionDownloadSize NOTIFY availableVersionChanged)
+    Q_PROPERTY(quint64 availableVersionInstallSize READ availableVersionInstallSize NOTIFY availableVersionChanged)
+    Q_PROPERTY(QString availableId READ availableId NOTIFY availableVersionChanged)
+    Q_PROPERTY(QString globalVersion READ globalVersion NOTIFY globalVersionChanged)
+    Q_PROPERTY(bool globalVersionIsNewer READ globalVersionIsNewer NOTIFY globalVersionIsNewerChanged)
+    Q_PROPERTY(quint64 globalVersionDownloadSize READ globalVersionDownloadSize NOTIFY globalVersionChanged)
+    Q_PROPERTY(quint64 globalVersionInstallSize READ globalVersionInstallSize NOTIFY globalVersionChanged)
 
     Q_PROPERTY(quint32 appId READ appId WRITE setAppId NOTIFY appIdChanged)
-    Q_PROPERTY(quint32 userId MEMBER mUserId NOTIFY updated)
-    Q_PROPERTY(quint32 ratingCount MEMBER mRatingCount NOTIFY updated)
-    Q_PROPERTY(quint32 commentsCount MEMBER mCommentsCount NOTIFY updated)
-    Q_PROPERTY(quint32 downloadsCount MEMBER mDownloadsCount NOTIFY updated)
-    Q_PROPERTY(float rating MEMBER mRating NOTIFY updated)
-    Q_PROPERTY(QString title MEMBER mTitle NOTIFY updated)
-    Q_PROPERTY(QString userName MEMBER mUserName NOTIFY updated)
-    Q_PROPERTY(QString userIconSource MEMBER mUserIconSource NOTIFY updated)
-    Q_PROPERTY(QString iconSource MEMBER mIconSource NOTIFY updated)
-    Q_PROPERTY(QString packageName MEMBER mPackageName NOTIFY updated)
-    Q_PROPERTY(QString body MEMBER mBody NOTIFY updated)
-    Q_PROPERTY(QString changelog MEMBER mChangelog NOTIFY updated)
-    Q_PROPERTY(QString category READ category NOTIFY updated)
-    Q_PROPERTY(QDateTime created MEMBER mCreated NOTIFY updated)
-    Q_PROPERTY(QDateTime updated MEMBER mUpdated NOTIFY updated)
-    Q_PROPERTY(QVariantList categories MEMBER mCategories NOTIFY updated)
-    Q_PROPERTY(QVariantList screenshots MEMBER mScreenshots NOTIFY updated)
+    Q_PROPERTY(quint32 userId MEMBER mUserId NOTIFY ornRequestFinished)
+    Q_PROPERTY(quint32 ratingCount MEMBER mRatingCount NOTIFY ornRequestFinished)
+    Q_PROPERTY(quint32 commentsCount MEMBER mCommentsCount NOTIFY ornRequestFinished)
+    Q_PROPERTY(quint32 downloadsCount MEMBER mDownloadsCount NOTIFY ornRequestFinished)
+    Q_PROPERTY(float rating MEMBER mRating NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString title MEMBER mTitle NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString userName MEMBER mUserName NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString userIconSource MEMBER mUserIconSource NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString iconSource MEMBER mIconSource NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString packageName MEMBER mPackageName NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString body MEMBER mBody NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString changelog MEMBER mChangelog NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString category READ category NOTIFY ornRequestFinished)
+    Q_PROPERTY(QDateTime created MEMBER mCreated NOTIFY ornRequestFinished)
+    Q_PROPERTY(QDateTime ornRequestFinished MEMBER mUpdated NOTIFY ornRequestFinished)
+    Q_PROPERTY(QVariantList categories MEMBER mCategories NOTIFY ornRequestFinished)
+    Q_PROPERTY(QVariantList screenshots MEMBER mScreenshots NOTIFY ornRequestFinished)
 
 public:
-    explicit OrnApplication(QObject *parent = 0);
+
+    explicit OrnApplication(QObject *parent = nullptr);
 
     quint32 appId() const;
     void setAppId(const quint32 &appId);
 
-    bool updateAvailable() const;
+    QString installedVersion() const;
+    quint64 installedVersionSize() const;
+    QString installedId() const;
+
+    QString availableVersion() const;
+    bool availableVersionIsNewer() const;
+    quint64 availableVersionDownloadSize() const;
+    quint64 availableVersionInstallSize() const;
+    QString availableId() const;
+
+    QString globalVersion() const;
+    bool globalVersionIsNewer() const;
+    quint64 globalVersionDownloadSize() const;
+    quint64 globalVersionInstallSize() const;
 
     bool canBeLaunched() const;
 
@@ -52,51 +81,47 @@ public:
 
 signals:
     void appIdChanged();
+    void ornRequestFinished();
     void canBeLaunchedChanged();
-    void updated();
-    void availableVersionChanged();
-    void installedVersionChanged();
-    void updateAvailableChanged();
     void repoStatusChanged();
-    void appNotFound();
-    void installed();
-    void removed();
+    void packageStatusChanged();
+    void installedVersionChanged();
+    void availableVersionChanged();
+    void availableVersionIsNewerChanged();
+    void globalVersionChanged();
+    void globalVersionIsNewerChanged();
 
 public slots:
-    void update();
-    void install();
-    void remove();
+    void ornRequest();
     void launch();
 
 private slots:
     void onJsonReady(const QJsonDocument &jsonDoc);
-    void onReposChanged();
-    void onAvailablePackagesChanged();
-    void onInstalledPackagesChanged();
-    // This two slots need only for emitting signals
-    void onPackageInstalled(const QString &packageId);
-    void onPackageRemoved(const QString &packageId);
+    void onRepoListChanged();
+    void onPackageStatusChanged(const QString &packageName, const OrnPm::PackageStatus &status);
+    void onPackageVersions(const QString &packageName, const OrnPackageVersionList &versions);
 
 private:
-    void checkDesktopFile();
+    void updateDesktopFile();
 
-private:
-    OrnZypp::RepoStatus mRepoStatus;
-    QString mRepoAlias;
-
-    QString mInstalledVersion;
-    QString mInstalledPackageId;
-    QString mAvailableVersion;
-    QString mAvailablePackageId;
-
-    QString mDesktopFile;
+    OrnPm::RepoStatus mRepoStatus;
+    OrnPm::PackageStatus mPackageStatus;
 
     quint32 mAppId;
     quint32 mUserId;
     quint32 mRatingCount;
     quint32 mCommentsCount;
     quint32 mDownloadsCount;
+
     float mRating;
+
+    OrnPackageVersion mInstalledVersion;
+    OrnPackageVersion mAvailableVersion;
+    OrnPackageVersion mGlobalVersion;
+
+    QString mRepoAlias;
+    QString mDesktopFile;
+
     QString mTitle;
     QString mUserName;
     QString mUserIconSource;

@@ -24,7 +24,7 @@ class OrnClient : public OrnApiRequest
     Q_PROPERTY(QList<quint32> bookmarks READ bookmarks NOTIFY bookmarksChanged)
 
 public:
-    explicit OrnClient(QObject *parent = 0);
+    explicit OrnClient(QObject *parent = nullptr);
     ~OrnClient();
 
     static OrnClient *instance();
@@ -46,9 +46,6 @@ public:
     Q_INVOKABLE bool hasBookmark(const quint32 &appId) const;
     Q_INVOKABLE bool addBookmark(const quint32 &appId);
     Q_INVOKABLE bool removeBookmark(const quint32 &appId);
-
-    Q_INVOKABLE void setValue(const QString &key, const QVariant &value);
-    Q_INVOKABLE QVariant value(const QString &key) const;
 
 public slots:
     void login(const QString &username, const QString &password);

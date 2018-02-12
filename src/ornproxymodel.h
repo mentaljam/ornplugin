@@ -8,7 +8,7 @@ class OrnProxyModel : public QSortFilterProxyModel
     Q_OBJECT
 
 public:
-    explicit OrnProxyModel(QObject *parent = 0);
+    explicit OrnProxyModel(QObject *parent = nullptr);
 
 public:
     // Why QSortFilterProxyModel has no sort slot?

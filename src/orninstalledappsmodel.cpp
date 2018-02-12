@@ -1,16 +1,21 @@
 #include "orninstalledappsmodel.h"
-#include "orn.h"
+#include "ornpm.h"
 
 #include <QDebug>
 
-OrnInstalledAppsModel::OrnInstalledAppsModel(QObject *parent) :
-    QAbstractListModel(parent)
+OrnInstalledAppsModel::OrnInstalledAppsModel(QObject *parent)
+    : QAbstractListModel(parent)
+    , mResetting(false)
 {
-    auto ornZypp = OrnZypp::instance();
-    connect(ornZypp, &OrnZypp::installedAppsReady,
-            this, &OrnInstalledAppsModel::onInstalledAppsReady);
-    connect(ornZypp, &OrnZypp::packageRemoved,
+    auto ornPm = OrnPm::instance();
+    connect(ornPm, &OrnPm::installedPackages,
+            this, &OrnInstalledAppsModel::onInstalledPackages);
+    connect(ornPm, &OrnPm::packageInstalled,
+            this, &OrnInstalledAppsModel::onPackageInstalled);
+    connect(ornPm, &OrnPm::packageRemoved,
             this, &OrnInstalledAppsModel::onPackageRemoved);
+    connect(ornPm, &OrnPm::updatablePackagesChanged,
+            this , &OrnInstalledAppsModel::onUpdatablePackagesChanged);
     this->reset();
 }
 
@@ -18,35 +23,113 @@ void OrnInstalledAppsModel::reset()
 {
     qDebug() << "Resetting model";
     this->beginResetModel();
-    OrnZypp::instance()->getInstalledApps();
+    mResetting = true;
+    mData.clear();
+    OrnPm::instance()->getInstalledPackages();
 }
 
-void OrnInstalledAppsModel::onInstalledAppsReady(const OrnZypp::AppList &apps)
+void OrnInstalledAppsModel::onInstalledPackages(const OrnInstalledPackageList &packages)
 {
-    if (!apps.empty())
+    if (mResetting)
     {
-        mData.clear();
-        mData.append(apps);
+        mData.append(packages);
+        mResetting = false;
+        this->endResetModel();
+        return;
     }
-    else
-    {
-        qWarning() << "App list is empty";
-    }
-    this->endResetModel();
-}
 
-void OrnInstalledAppsModel::onPackageRemoved(const QString &packageId)
-{
-    auto name = packageId.section(QChar(';'), 0, 0);
-    auto size = mData.size();
-    for (OrnZypp::AppList::size_type i = 0; i < size; ++i)
+    auto size = packages.size();
+    if (size == 0)
     {
-        if (mData[i].name == name)
+        return;
+    }
+
+    auto count = mData.size();
+    QModelIndex parentIndex;
+
+    // Just append new apps if there is no items
+    if (count == 0)
+    {
+        this->beginInsertRows(parentIndex, 0, size - 1);
+        mData.append(packages);
+        this->endInsertRows();
+        return;
+    }
+
+    // Create a hash for the further work
+    QHash<QString, OrnInstalledPackage> packageHash;
+    for (const auto &package : packages)
+    {
+        packageHash[package.name] = package;
+    }
+
+    for (OrnInstalledPackageList::size_type i = count; i >= 0; --i)
+    {
+        // Update updated packages
+        auto name = mData[i].name;
+        if (packageHash.contains(name))
         {
+            qDebug() << "Updating model item" << name;
+            mData[i] = packageHash[name];
+            auto ind = this->createIndex(i, 0);
+            emit this->dataChanged(ind, ind);
+            // Remove processed packages from the hash
+            packageHash.remove(name);
+        }
+        // Remove removed packages
+        else
+        {
+            qDebug() << "Removing model item" << name;
+            this->beginRemoveRows(parentIndex, i, i);
+            mData.removeAt(i);
+            this->endRemoveRows();
+        }
+    }
+
+    // Append other packages to the model
+    auto installed = packageHash.values();
+    count = mData.size();
+    this->beginInsertRows(parentIndex, count, count + installed.size() - 1);
+    mData.append(installed);
+    this->endInsertRows();
+}
+
+void OrnInstalledAppsModel::onPackageInstalled(const QString &packageName)
+{
+    OrnPm::instance()->getInstalledPackages(packageName);
+}
+
+void OrnInstalledAppsModel::onPackageRemoved(const QString &packageName)
+{
+    auto size = mData.size();
+    for (OrnInstalledPackageList::size_type i = 0; i < size; ++i)
+    {
+        if (mData[i].name == packageName)
+        {
+            qDebug() << "Removing model item" << packageName;
             this->beginRemoveRows(QModelIndex(), i, i);
             mData.removeAt(i);
             this->endInsertRows();
             return;
+        }
+    }
+}
+
+void OrnInstalledAppsModel::onUpdatablePackagesChanged()
+{
+    auto ornPm = OrnPm::instance();
+    QVector<int> roles = { SortRole, UpdateAvailableRole };
+    auto count = mData.size();
+    for (OrnInstalledPackageList::size_type i = 0; i < count; ++i)
+    {
+        auto &package = mData[i];
+        bool ua = ornPm->packageStatus(package.name) ==
+                OrnPm::PackageUpdateAvailable;
+        if (package.updateAvailable != ua)
+        {
+            package.updateAvailable = ua;
+            auto ind = this->createIndex(i, 0);
+            emit this->dataChanged(ind, ind, roles);
         }
     }
 }
@@ -63,31 +146,25 @@ QVariant OrnInstalledAppsModel::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    auto app = mData[index.row()];
+    auto package = mData[index.row()];
     switch (role)
     {
     case NameRole:
-        return app.name;
+        return package.name;
     case TitleRole:
-        return app.title;
+        return package.title;
     case VersionRole:
-        return app.version;
-    case AuthorRole:
-        return app.author;
+        return package.version;
     case IconRole:
-        return app.icon;
+        return package.icon;
     case SortRole:
-        // First show apps with available updates then sort by title
-        return QString::number(app.updateId.isEmpty()).append(app.title);
+        // At first show packages with available updates then sort by title
+        return QString::number(!package.updateAvailable).append(package.title);
     case SectionRole:
-        return app.title.at(0).toUpper();
+        return package.title.at(0).toUpper();
     case UpdateAvailableRole:
         // Return int to make it easier to parse
-        return (int)!app.updateId.isEmpty();
-    case PackageIdRole:
-        return app.packageId;
-    case UpdateIdRole:
-        return app.updateId;
+        return (int)package.updateAvailable;
     default:
         return QVariant();
     }
@@ -96,14 +173,11 @@ QVariant OrnInstalledAppsModel::data(const QModelIndex &index, int role) const
 QHash<int, QByteArray> OrnInstalledAppsModel::roleNames() const
 {
     return {
-        { NameRole,    "appName"       },
-        { TitleRole,   "appTitle"      },
-        { VersionRole, "appVersion"    },
-        { AuthorRole,  "appAuthor"     },
-        { IconRole,    "appIconSource" },
-        { SectionRole, "section"       },
-        { UpdateAvailableRole, "updateAvailable" },
-        { PackageIdRole, "packageId"     },
-        { UpdateIdRole,  "updateId"      },
+        { NameRole,    "packageName"    },
+        { TitleRole,   "packageTitle"   },
+        { VersionRole, "packageVersion" },
+        { IconRole,    "packageIcon"    },
+        { SectionRole, "section"        },
+        { UpdateAvailableRole, "updateAvailable" }
     };
 }

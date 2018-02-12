@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonValue>
+
 #include <QDebug>
 
 const QMap<quint32, const char*> OrnCategoryListItem::categories{

@@ -9,7 +9,7 @@ class OrnUserAppsModel : public OrnAbstractAppsModel
     Q_PROPERTY(quint32 userId READ userId WRITE setUserId NOTIFY userIdChanged)
 
 public:
-    explicit OrnUserAppsModel(QObject *parent = 0);
+    explicit OrnUserAppsModel(QObject *parent = nullptr);
 
     quint32 userId() const;
     void setUserId(const quint32 &userId);

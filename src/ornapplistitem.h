@@ -21,8 +21,8 @@ class OrnAppListItem : public QObject
     Q_PROPERTY(QString category MEMBER mCategory CONSTANT)
 
 public:
-    explicit OrnAppListItem(QObject *parent = 0);
-    OrnAppListItem(const QJsonObject &jsonObject, QObject *parent = 0);
+    explicit OrnAppListItem(QObject *parent = nullptr);
+    OrnAppListItem(const QJsonObject &jsonObject, QObject *parent = nullptr);
 
 private:
     static QString sinceLabel(const quint32 &value);

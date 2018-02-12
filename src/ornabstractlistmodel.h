@@ -7,6 +7,7 @@
 #include <QJsonArray>
 #include <QUrlQuery>
 #include <QCryptographicHash>
+
 #include <QDebug>
 
 class OrnApiRequest;
@@ -17,7 +18,7 @@ class OrnAbstractListModel : public QAbstractListModel
     Q_PROPERTY(OrnApiRequest* apiRequest READ apiRequest CONSTANT)
 
 public:
-    OrnAbstractListModel(bool fetchable, QObject *parent = 0);
+    OrnAbstractListModel(bool fetchable, QObject *parent = nullptr);
 
     OrnApiRequest *apiRequest() const;
 

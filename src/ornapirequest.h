@@ -11,7 +11,7 @@ class OrnApiRequest : public QObject
     Q_OBJECT
 
 public:
-    explicit OrnApiRequest(QObject *parent = 0);
+    explicit OrnApiRequest(QObject *parent = nullptr);
     ~OrnApiRequest();
 
     void run(const QNetworkRequest &request);

@@ -14,13 +14,13 @@ class OrnCategoryListItem : public QObject
     Q_PROPERTY(QString name MEMBER mName CONSTANT)
 
 public:
-    explicit OrnCategoryListItem(QObject *parent = 0);
-    OrnCategoryListItem(const QJsonObject &jsonObject, QObject *parent = 0);
+    explicit OrnCategoryListItem(QObject *parent = nullptr);
+    OrnCategoryListItem(const QJsonObject &jsonObject, QObject *parent = nullptr);
 
     static QString categoryName(const quint32 &tid);
 
 private:
-    static QObjectList parse(const QJsonObject &jsonObject, QObject *parent = 0);
+    static QObjectList parse(const QJsonObject &jsonObject, QObject *parent = nullptr);
 
 private:
     quint32 mTid;
