@@ -14,6 +14,7 @@
 #include <QDataStream>
 #include <QDir>
 #include <QGuiApplication>
+
 #include <QDebug>
 
 #define USER_COOKIE         QStringLiteral("user/cookie")
@@ -87,13 +88,7 @@ OrnClient::OrnClient(QObject *parent) :
 OrnClient::~OrnClient()
 {
     // Write ids of bookmarked apps
-    auto dir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
-    if (!dir.exists() && !dir.mkpath(QChar('.')))
-    {
-        qWarning() << "Could not create local data dir" << dir.path();
-        return;
-    }
-    auto path = dir.absoluteFilePath(QStringLiteral("bookmarks"));
+    auto path = Orn::locate(QStringLiteral("bookmarks"));
     QFile file(path);
     if (file.open(QFile::WriteOnly))
     {
