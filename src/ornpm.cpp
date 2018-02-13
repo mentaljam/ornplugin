@@ -221,8 +221,8 @@ QDBusInterface *OrnPmPrivate::transaction()
     QObject::connect(t, SIGNAL(Finished(quint32,quint32)),  q_ptr, SLOT(onTransactionFinished(quint32,quint32)));
     QObject::connect(t, SIGNAL(ErrorCode(quint32,QString)), q_ptr, SLOT(emitError(quint32,QString)));
 #else
-    connect(t, SIGNAL(Finished(quint32, quint32)), t, SLOT(deleteLater()));
-    connect(t, SIGNAL(ErrorCode(quint32,QString)), q_ptr, SIGNAL(error(quint32,QString)));
+    QObject::connect(t, SIGNAL(Finished(quint32, quint32)), t, SLOT(deleteLater()));
+    QObject::connect(t, SIGNAL(ErrorCode(quint32,QString)), q_ptr, SIGNAL(error(quint32,QString)));
 #endif
     return t;
 }
@@ -676,6 +676,8 @@ void OrnPm::refreshNextRepo(quint32 exit, quint32 runtime)
 
 #ifdef QT_DEBUG
     d_ptr->refreshRuntime += runtime;
+#else
+    Q_UNUSED(runtime)
 #endif
 
     if (d_ptr->reposToRefresh.isEmpty())
