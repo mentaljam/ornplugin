@@ -160,6 +160,11 @@ bool OrnPm::updatesAvailable() const
     return d_ptr->updatablePackages.size();
 }
 
+QStringList OrnPm::updatablePackages() const
+{
+    return d_ptr->updatablePackages.keys();
+}
+
 OrnPm::RepoStatus OrnPm::repoStatus(const QString &alias) const
 {
     if (d_ptr->repos.contains(alias))
@@ -261,22 +266,25 @@ void OrnPm::onPackageUpdate(quint32 info, QString packageId, QString summary)
 void OrnPm::onGetUpdatesFinished(quint32 status, quint32 runtime)
 {
     Q_UNUSED(runtime)
-    if (status == Transaction::ExitSuccess &&
-        d_ptr->updatablePackages != d_ptr->newUpdatablePackages)
+    if (status == Transaction::ExitSuccess)
     {
-        bool emitNewUpdates = true;
-        for (auto it = d_ptr->newUpdatablePackages.cbegin(); it != d_ptr->newUpdatablePackages.cend(); ++it)
+        bool newupdates = false;
+        // If some client listen to packageStatusChanged() and want to take a package
+        // update ID we swap to hashes before all the checks
+        d_ptr->updatablePackages.swap(d_ptr->newUpdatablePackages);
+        for (const auto &name : d_ptr->updatablePackages.keys())
         {
-            emit this->packageStatusChanged(it.key(), OrnPm::PackageUpdateAvailable);
-            if (emitNewUpdates && !d_ptr->updatablePackages.contains(it.value()))
+            if (!d_ptr->newUpdatablePackages.contains(name) ||
+                d_ptr->newUpdatablePackages[name] != d_ptr->updatablePackages[name])
             {
-
-                emit this->newUpdatesAvailable();
-                emitNewUpdates = false;
+                emit this->packageStatusChanged(name, OrnPm::PackageUpdateAvailable);
+                newupdates = true;
             }
         }
-        d_ptr->updatablePackages = d_ptr->newUpdatablePackages;
-        emit this->updatablePackagesChanged();
+        if (newupdates)
+        {
+            emit this->updatablePackagesChanged();
+        }
     }
     d_ptr->newUpdatablePackages.clear();
 }

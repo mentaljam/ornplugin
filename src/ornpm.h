@@ -98,6 +98,7 @@ public:
     QString deviceModel() const;
 
     bool updatesAvailable() const;
+    QStringList updatablePackages() const;
 
     RepoStatus repoStatus(const QString &alias) const;
     PackageStatus packageStatus(const QString &packageName) const;
@@ -116,7 +117,6 @@ private slots:
 
     // Check for updates
 signals:
-    void newUpdatesAvailable();
     void updatablePackagesChanged();
 private slots:
     void getUpdates();
