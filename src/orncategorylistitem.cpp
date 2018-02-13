@@ -35,6 +35,8 @@ const QMap<quint32, const char*> OrnCategoryListItem::categories{
     { 2983, QT_TRID_NOOP("orn-cat-patches") },
     //% "Photo & video"
     {    7, QT_TRID_NOOP("orn-cat-photo-video") },
+    //% "Public Transport"
+    { 3755, QT_TRID_NOOP("orn-cat-public-transport") },
     //% "Social Networks"
     {    9, QT_TRID_NOOP("orn-cat-social-networks") },
     //% "Sports"
