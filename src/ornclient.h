@@ -24,9 +24,6 @@ class OrnClient : public OrnApiRequest
     Q_PROPERTY(QList<quint32> bookmarks READ bookmarks NOTIFY bookmarksChanged)
 
 public:
-    explicit OrnClient(QObject *parent = nullptr);
-    ~OrnClient();
-
     static OrnClient *instance();
     static inline QObject *qmlInstance(QQmlEngine *engine, QJSEngine *scriptEngine)
     {
@@ -70,6 +67,8 @@ private slots:
     void onCommentEdited();
 
 private:
+    explicit OrnClient(QObject *parent = nullptr);
+    ~OrnClient();
     QNetworkRequest authorisedRequest();
     QJsonDocument processReply();
     static void prepareComment(QJsonObject &object, const QString &body);

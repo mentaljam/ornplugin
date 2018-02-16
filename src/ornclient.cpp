@@ -33,10 +33,10 @@ OrnClient *OrnClient::gInstance = nullptr;
 
 extern QNetworkAccessManager *ornNetworkAccessManager;
 
-OrnClient::OrnClient(QObject *parent) :
-    OrnApiRequest(parent),
-    mSettings(new QSettings(this)),
-    mCookieTimer(new QTimer(this))
+OrnClient::OrnClient(QObject *parent)
+    : OrnApiRequest(parent)
+    , mSettings(new QSettings(this))
+    , mCookieTimer(new QTimer(this))
 {
     // Configure cookie timer
     mCookieTimer->setSingleShot(true);
