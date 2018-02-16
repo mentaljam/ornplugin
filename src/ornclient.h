@@ -21,7 +21,6 @@ class OrnClient : public OrnApiRequest
     Q_PROPERTY(quint32 userId READ userId NOTIFY authorisedChanged)
     Q_PROPERTY(QString userName READ userName NOTIFY authorisedChanged)
     Q_PROPERTY(QString userIconSource READ userIconSource NOTIFY authorisedChanged)
-    Q_PROPERTY(QList<quint32> bookmarks READ bookmarks NOTIFY bookmarksChanged)
 
 public:
     static OrnClient *instance();
@@ -39,7 +38,7 @@ public:
     QString userName() const;
     QString userIconSource() const;
 
-    QList<quint32> bookmarks() const;
+    Q_INVOKABLE QList<quint32> bookmarks() const;
     Q_INVOKABLE bool hasBookmark(const quint32 &appId) const;
     Q_INVOKABLE bool addBookmark(const quint32 &appId);
     Q_INVOKABLE bool removeBookmark(const quint32 &appId);
@@ -57,7 +56,6 @@ signals:
     void cookieIsValidChanged();
     void commentAdded(quint32 cid);
     void commentEdited(quint32 cid);
-    void bookmarksChanged();
     void bookmarkChanged(quint32 appid, bool bookmarked);
 
 private slots:
