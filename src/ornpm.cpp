@@ -644,7 +644,7 @@ void OrnPm::refreshRepo(const QString &repoAlias, bool force)
 
 void OrnPm::refreshRepos(bool force)
 {
-    CHECK_INITIALISED();
+    SET_OPERATION_ITEM(RefreshingAllRepos, QStringLiteral("refresh-repos"));
 
     for (auto it = d_ptr->repos.cbegin(); it != d_ptr->repos.cend(); ++it)
     {
@@ -687,6 +687,8 @@ void OrnPm::refreshNextRepo(quint32 exit, quint32 runtime)
                  << d_ptr->refreshRuntime << "msec";
 #endif
         d_ptr->pkInterface->blockSignals(false);
+        d_ptr->operations.remove(QStringLiteral("refresh-repos"));
+        emit this->operationsChanged();
     }
     else
     {
