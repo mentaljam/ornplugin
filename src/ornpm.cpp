@@ -270,18 +270,33 @@ void OrnPm::onGetUpdatesFinished(quint32 status, quint32 runtime)
     {
         bool newupdates = false;
         // If some client listen to packageStatusChanged() and want to take a package
-        // update ID we swap to hashes before all the checks
+        // update ID we swap two hashes before the checks
         d_ptr->updatablePackages.swap(d_ptr->newUpdatablePackages);
-        for (const auto &name : d_ptr->updatablePackages.keys())
+        auto it = d_ptr->updatablePackages.begin();
+        while (it != d_ptr->updatablePackages.end())
         {
-            if (!d_ptr->newUpdatablePackages.contains(name) ||
-                d_ptr->newUpdatablePackages[name] != d_ptr->updatablePackages[name])
+            auto &name = it.key();
+            auto &id   = it.value();
+            auto repo  = Orn::packageRepo(id);
+            // A walkaround to skip inactual updates from removed/disabled repos
+            if (!d_ptr->repos.contains(repo) || !d_ptr->repos[repo])
             {
-                emit this->packageStatusChanged(name, OrnPm::PackageUpdateAvailable);
-                newupdates = true;
+                it = d_ptr->updatablePackages.erase(it);
+            }
+            else
+            {
+                // Check if the update is really new
+                if (!d_ptr->newUpdatablePackages.contains(name) ||
+                    d_ptr->newUpdatablePackages[name] != id)
+                {
+                    emit this->packageStatusChanged(name, OrnPm::PackageUpdateAvailable);
+                    newupdates = true;
+                }
+                ++it;
             }
         }
-        if (newupdates)
+        if (newupdates ||
+            (d_ptr->updatablePackages.size() != d_ptr->newUpdatablePackages.size()))
         {
             emit this->updatablePackagesChanged();
         }
@@ -499,8 +514,6 @@ void OrnPm::addRepo(const QString &author)
 
 void OrnPm::modifyRepo(const QString &repoAlias, const OrnPm::RepoAction &action)
 {
-    CHECK_INITIALISED();
-
     Operation op;
     switch (action)
     {
@@ -514,8 +527,7 @@ void OrnPm::modifyRepo(const QString &repoAlias, const OrnPm::RepoAction &action
         op = EnablingRepo;
         break;
     default:
-        Q_ASSERT(false);
-        break;
+        Q_UNREACHABLE();
     }
     SET_OPERATION_ITEM(op, repoAlias);
 
@@ -624,6 +636,7 @@ void OrnPmPrivate::onRepoModified(const QString &repoAlias, const OrnPm::RepoAct
         emit q_ptr->operationsChanged();
         emit q_ptr->repoModified(repoAlias, action);
         qDebug() << "Repo" << repoAlias << "have been modified with" << action;
+        q_ptr->getUpdates();
     }
 }
 
