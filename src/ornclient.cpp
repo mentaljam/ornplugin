@@ -38,10 +38,6 @@ OrnClient::OrnClient(QObject *parent)
     , mSettings(new QSettings(this))
     , mCookieTimer(new QTimer(this))
 {
-    // Configure cookie timer
-    mCookieTimer->setSingleShot(true);
-    this->setCookieTimer();
-
     // Check if authorisation has expired
     if (this->authorised())
     {
@@ -83,6 +79,10 @@ OrnClient::OrnClient(QObject *parent)
 
     // A workaround as qml does not call a destructor
     connect(qApp, &QGuiApplication::aboutToQuit, this, &OrnClient::deleteLater);
+
+    // Configure cookie timer
+    mCookieTimer->setSingleShot(true);
+    QTimer::singleShot(1000, this, &OrnClient::setCookieTimer);
 }
 
 OrnClient::~OrnClient()
@@ -174,9 +174,9 @@ bool OrnClient::removeBookmark(const quint32 &appId)
 
 void OrnClient::login(const QString &username, const QString &password)
 {
-    // Stop timer and remove old credentials
-    this->setCookieTimer();
+    // Remove old credentials and stop timer
     mSettings->remove(QStringLiteral("user"));
+    this->setCookieTimer();
 
     QNetworkRequest request;
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("user/login")));
