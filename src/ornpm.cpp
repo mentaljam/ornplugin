@@ -484,6 +484,7 @@ void OrnPm::onPackageUpdated(quint32 exit, quint32 runtime)
         d_ptr->installedPackages[name] = Orn::packageVersion(id);
         emit this->packageUpdated(name);
         emit this->packageStatusChanged(name, OrnPm::PackageInstalled);
+        emit this->updatablePackagesChanged();
     }
     else
     {
