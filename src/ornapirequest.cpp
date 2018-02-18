@@ -12,12 +12,10 @@ const QByteArray OrnApiRequest::platformValue(QByteArrayLiteral("SailfishOS"));
 
 extern QNetworkAccessManager *ornNetworkAccessManager;
 
-OrnApiRequest::OrnApiRequest(QObject *parent) :
-    QObject(parent),
-    mNetworkReply(0)
-{
-
-}
+OrnApiRequest::OrnApiRequest(QObject *parent)
+    : QObject(parent)
+    , mNetworkReply(nullptr)
+{}
 
 OrnApiRequest::~OrnApiRequest()
 {
@@ -57,7 +55,7 @@ void OrnApiRequest::reset()
     if (mNetworkReply)
     {
         mNetworkReply->deleteLater();
-        mNetworkReply = 0;
+        mNetworkReply = nullptr;
     }
 }
 

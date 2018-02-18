@@ -195,8 +195,8 @@ void OrnClient::logout()
 {
     if (this->authorised())
     {
-        this->setCookieTimer();
         mSettings->remove(QStringLiteral("user"));
+        this->setCookieTimer();
         emit this->authorisedChanged();
     }
 }
@@ -239,18 +239,18 @@ void OrnClient::setCookieTimer()
     QString cookieExpireKey(USER_COOKIE_EXPIRE);
     if (mSettings->contains(cookieExpireKey))
     {
-        auto msecToExpire = mSettings->value(cookieExpireKey).toDateTime()
-                .msecsTo(QDateTime::currentDateTime());
-        if (msecToExpire > 86400000)
+        auto msec_to_expiry = QDateTime::currentDateTime().msecsTo(
+                    mSettings->value(cookieExpireKey).toDateTime());
+        if (msec_to_expiry > 86400000)
         {
             connect(mCookieTimer, &QTimer::timeout, this, &OrnClient::dayToExpiry);
-            mCookieTimer->start(msecToExpire - 86400000);
+            mCookieTimer->start(msec_to_expiry - 86400000);
         }
-        else if (msecToExpire > 0)
+        else if (msec_to_expiry > 0)
         {
             emit this->dayToExpiry();
             connect(mCookieTimer, &QTimer::timeout, this, &OrnClient::cookieIsValidChanged);
-            mCookieTimer->start(msecToExpire);
+            mCookieTimer->start(msec_to_expiry);
         }
         else
         {
@@ -347,7 +347,7 @@ QJsonDocument OrnClient::processReply()
     {
         qDebug() << "Network request error" << mNetworkReply->error()
                  << "-" << mNetworkReply->errorString();
-        if (this->authorised() && networkError == QNetworkReply::ServiceUnavailableError)
+        if (this->authorised())
         {
             emit this->cookieIsValidChanged();
         }
