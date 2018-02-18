@@ -13,6 +13,7 @@ struct OrnPackageVersion
     QString repoAlias;
 
     OrnPackageVersion();
+    OrnPackageVersion(const QString &version);
     OrnPackageVersion(const quint64 &dsize, const quint64 &isize,
                       const QString &version, const QString &arch, const QString &alias);
 

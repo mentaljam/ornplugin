@@ -33,7 +33,7 @@ SOURCES += \
     src/orncategoryappsmodel.cpp \
     src/orninstalledappsmodel.cpp \
     src/ornbookmarksmodel.cpp \
-#    src/ornbackup.cpp \
+    src/ornbackup.cpp \
     src/ornpm.cpp \
     src/ornpackageversion.cpp
 
@@ -58,7 +58,7 @@ HEADERS += \
     src/orncategoryappsmodel.h \
     src/orninstalledappsmodel.h \
     src/ornbookmarksmodel.h \
-#    src/ornbackup.h \
+    src/ornbackup.h \
     src/ornpm.h \
     src/ornpm_p.h \
     src/ornpackageversion.h \

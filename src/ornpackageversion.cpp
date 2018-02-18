@@ -1,12 +1,31 @@
 #include "ornpackageversion.h"
 
-//#include <QVariantList>
 #include <QRegularExpression>
 
+
+QVariantList splitVersion(const QString &version)
+{
+    QVariantList parts;
+    static QRegularExpression sep_re(QStringLiteral("[.+~-]"));
+    bool ok;
+    for (const QString &s : version.split(sep_re))
+    {
+        auto v = s.toInt(&ok);
+        parts << (ok ? QVariant(v) : QVariant(s));
+    }
+    return parts;
+}
 
 OrnPackageVersion::OrnPackageVersion()
     : downloadSize(0)
     , installSize(0)
+{}
+
+OrnPackageVersion::OrnPackageVersion(const QString &version)
+    : downloadSize(0)
+    , installSize(0)
+    , version(version)
+    , versionParts(splitVersion(version))
 {}
 
 OrnPackageVersion::OrnPackageVersion(const quint64 &dsize, const quint64 &isize,
@@ -16,15 +35,8 @@ OrnPackageVersion::OrnPackageVersion(const quint64 &dsize, const quint64 &isize,
     , version(version)
     , arch(arch)
     , repoAlias(alias)
-{
-    static QRegularExpression sepRe(QStringLiteral("[.+~-]"));
-    bool ok;
-    for (const QString &s : version.split(sepRe))
-    {
-        auto v = s.toInt(&ok);
-        versionParts << (ok ? QVariant(v) : QVariant(s));
-    }
-}
+    , versionParts(splitVersion(version))
+{}
 
 QString OrnPackageVersion::packageId(const QString &name) const
 {

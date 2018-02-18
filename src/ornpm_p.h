@@ -21,6 +21,8 @@
 #define PK_METHOD_REMOVEPACKAGES    "RemovePackages"
 #define PK_METHOD_UPDATEPACKAGES    "UpdatePackages"
 #define PK_METHOD_REPOSETDATA       "RepoSetData"
+#define PK_METHOD_RESOLVE           "Resolve"
+#define PK_METHOD_REFRESHCACHE      "RefreshCache"
 
 #define PK_PROP_LASTPACKAGE         "LastPackage"
 
@@ -32,6 +34,7 @@
 
 
 #include "ornpm.h"
+#include "orninstalledpackage.h"
 
 #include <QSet>
 
@@ -49,7 +52,7 @@ struct OrnPmPrivate
     void preparePackageVersions(const QString &packageName);
     void enableRepos(bool enable);
     void onRepoModified(const QString &repoAlias, const OrnPm::RepoAction &action);
-    void prepareInstalledPackages(const QString &packageName);
+    OrnInstalledPackageList prepareInstalledPackages(const QString &packageName);
 
     static inline QString lastPackage(QObject *t)
     {

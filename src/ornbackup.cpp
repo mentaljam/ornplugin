@@ -1,7 +1,9 @@
 #include "ornbackup.h"
-#include "ornzypp.h"
-#include "ornversion.h"
+#include "ornpm.h"
+#include "ornpm_p.h"
+#include "ornpackageversion.h"
 #include "ornclient.h"
+#include "orn.h"
 
 #include <QFileInfo>
 #include <QSettings>
@@ -18,13 +20,10 @@
 #define BR_INSTALLED     QStringLiteral("packages/installed")
 #define BR_BOOKMARKS     QStringLiteral("packages/bookmarks")
 
-OrnBackup::OrnBackup(QObject *parent) :
-    QObject(parent),
-    mZypp(OrnZypp::instance()),
-    mStatus(Idle)
-{
-
-}
+OrnBackup::OrnBackup(QObject *parent)
+    : QObject(parent)
+    , mStatus(Idle)
+{}
 
 OrnBackup::Status OrnBackup::status() const
 {
@@ -73,7 +72,6 @@ void OrnBackup::backup(const QString &filePath)
         qCritical() << "Failed to create directory" << dir.absolutePath();
         emit this->backupError(DirectoryError);
     }
-    qDebug() << mFilePath;
     QtConcurrent::run(this, &OrnBackup::pBackup);
 }
 
@@ -107,12 +105,6 @@ QStringList OrnBackup::notFound() const
     return names;
 }
 
-bool OrnBackup::removeFile(const QString &filePath)
-{
-    Q_ASSERT_X(!QFileInfo(filePath).isDir(), Q_FUNC_INFO, "Path must be a file");
-    return QFile(filePath).remove();
-}
-
 void OrnBackup::pSearchPackages()
 {
     qDebug() << "Searching packages";
@@ -121,48 +113,32 @@ void OrnBackup::pSearchPackages()
     // Delete future watcher and prepare variables
     this->sender()->deleteLater();
     mPackagesToInstall.clear();
-    mSearchIndex = 0;
 
-    auto t = new PackageKit::Transaction();
-    connect(t, &PackageKit::Transaction::errorCode, mZypp, &OrnZypp::pkError);
-    connect(t, &PackageKit::Transaction::package, this, &OrnBackup::pAddPackage);
-    // It seems that the PackageKit::Transaction::searchNames(QStringList, ...)
-    // does searches only for the first name so we use this hack
-    connect(t, &PackageKit::Transaction::finished, [this, t]()
-    {
-        ++mSearchIndex;
-        if (mSearchIndex < mNamesToSearch.size())
-        {
-            t->reset();
-            t->searchNames(mNamesToSearch[mSearchIndex]);
-        }
-        else
-        {
-            t->deleteLater();
-            this->pInstallPackages();
-        }
-    });
-    t->searchNames(mNamesToSearch[mSearchIndex]);
+    auto t = OrnPm::instance()->d_ptr->transaction();
+    connect(t, SIGNAL(Package(quint32,QString,QString)), this, SLOT(pAddPackage(quint32,QString,QString)));
+    connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(pInstallPackages()));
+    qDebug().nospace() << "Calling " << t << "->" PK_METHOD_RESOLVE "("
+                       << PK_FLAG_NONE << ", " << mNamesToSearch << ")";
+    t->asyncCall(QStringLiteral(PK_METHOD_RESOLVE), PK_FLAG_NONE, mNamesToSearch);
 }
 
-void OrnBackup::pAddPackage(int info, const QString &packageId, const QString &summary)
+void OrnBackup::pAddPackage(quint32 info, const QString &packageId, const QString &summary)
 {
     Q_UNUSED(info)
     Q_UNUSED(summary)
-    auto idParts = packageId.split(QChar(';'));
-    auto name = idParts.first();
+    auto name = Orn::packageName(packageId);
     if (mNamesToSearch.contains(name))
     {
-        auto repo = idParts.last();
+        auto repo = Orn::packageRepo(packageId);
         // Process only packages from OpenRepos
-        if (repo.startsWith(OrnZypp::repoNamePrefix))
+        if (repo.startsWith(OrnPm::repoNamePrefix))
         {
             // We will filter the newest versions later
             mPackagesToInstall.insert(name, packageId);
         }
         else if (repo == QStringLiteral("installed"))
         {
-            mInstalled.insert(name, idParts[1]);
+            mInstalled.insert(name, Orn::packageVersion(packageId));
         }
     }
 }
@@ -177,18 +153,19 @@ void OrnBackup::pInstallPackages()
     {
         const auto &pids = mPackagesToInstall.values(pname);
         QString newestId;
-        OrnVersion newestVersion;
+        OrnPackageVersion newestVersion;
         for (const auto &pid : pids)
         {
-            OrnVersion v(PackageKit::Transaction::packageVersion(pid));
-            if (v > newestVersion)
+            OrnPackageVersion v(Orn::packageVersion(pid));
+            if (newestVersion < v)
             {
                 newestVersion = v;
                 newestId = pid;
             }
         }
         // Skip packages that are already installed
-        if (!mInstalled.contains(pname) || OrnVersion(mInstalled[pname]) < newestVersion)
+        if (!mInstalled.contains(pname) ||
+            OrnPackageVersion(mInstalled[pname]) < newestVersion)
         {
             ids << newestId;
         }
@@ -200,9 +177,11 @@ void OrnBackup::pInstallPackages()
     }
     else
     {
-        auto t = mZypp->transaction();
-        connect(t, &PackageKit::Transaction::finished, this, &OrnBackup::pFinishRestore);
-        t->installPackages(ids);
+        auto t = OrnPm::instance()->d_ptr->transaction();
+        connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(pFinishRestore()));
+        qDebug().nospace() << "Calling " << t << "->" PK_METHOD_INSTALLPACKAGES "("
+                           << PK_FLAG_NONE << ", " << ids << ")";
+        t->call(QStringLiteral(PK_METHOD_INSTALLPACKAGES), PK_FLAG_NONE, ids);
     }
 }
 
@@ -221,20 +200,16 @@ void OrnBackup::pBackup()
     QSettings file(mFilePath, QSettings::IniFormat);
     QStringList repos;
     QStringList disabled;
-    QSet<QString> ornPackages;
+    auto ornpm_p = OrnPm::instance()->d_ptr;
 
-    for (auto it = mZypp->mRepos.cbegin(); it != mZypp->mRepos.cend(); ++it)
+    auto prefix_size = OrnPm::repoNamePrefix.size();
+    for (auto it = ornpm_p->repos.cbegin(); it != ornpm_p->repos.cend(); ++it)
     {
-        auto author = it.key().mid(OrnZypp::repoNamePrefixLength);
+        auto author = it.key().mid(prefix_size);
         repos << author;
-        auto repo = it.value();
-        if (!repo.enabled)
+        if (!it.value())
         {
             disabled << author;
-        }
-        for (const auto &package : repo.packages)
-        {
-            ornPackages.insert(package);
         }
     }
 
@@ -244,12 +219,9 @@ void OrnBackup::pBackup()
 
     qDebug() << "Backing up installed packages";
     QStringList installed;
-    for (const auto &name :  mZypp->mInstalledPackages.uniqueKeys())
+    for (const auto &p : ornpm_p->prepareInstalledPackages(QString()))
     {
-        if (ornPackages.contains(name))
-        {
-            installed << name;
-        }
+        installed << p.name;
     }
     file.setValue(BR_INSTALLED, installed);
 
@@ -275,14 +247,9 @@ void OrnBackup::pRestore()
     qDebug() << "Restoring bookmarks";
     this->setStatus(RestoringBookmarks);
     auto client = OrnClient::instance();
-    auto oldBookmarks = client->mBookmarks;
     for (const auto &b : file.value(BR_BOOKMARKS).toList())
     {
         client->mBookmarks.insert(b.toUInt());
-    }
-    if (oldBookmarks != client->mBookmarks)
-    {
-        emit client->bookmarksChanged();
     }
 
     qDebug() << "Restoring repos";
@@ -292,14 +259,14 @@ void OrnBackup::pRestore()
     auto disabled = file.value(BR_REPO_DISABLED).toStringList().toSet();
     mNamesToSearch = file.value(BR_INSTALLED).toStringList();
 
+    auto ornpm_p = OrnPm::instance()->d_ptr;
+    QString method(SSU_METHOD_ADDREPO);
+    QString repo_tmpl(REPO_URL_TMPL);
     for (const auto &author : repos)
     {
-        auto alias = OrnZypp::repoNamePrefix + author;
-        auto call = QDBusMessage::createMethodCall(OrnZypp::ssuInterface, OrnZypp::ssuPath,
-                                                   OrnZypp::ssuInterface, OrnZypp::ssuAddRepo);
-        call.setArguments(QVariantList{ alias, OrnZypp::repoBaseUrl.arg(author) });
-        QDBusConnection::systemBus().call(call, QDBus::Block);
-        mZypp->mRepos.insert(alias, OrnZypp::RepoMeta(!disabled.contains(author)));
+        auto alias = OrnPm::repoNamePrefix + author;
+        ornpm_p->ssuInterface->call(QDBus::Block, method, alias, repo_tmpl.arg(author));
+        ornpm_p->repos.insert(alias, !disabled.contains(author));
     }
 }
 
@@ -307,9 +274,8 @@ void OrnBackup::pRefreshRepos()
 {
     qDebug() << "Refreshing repos";
     this->setStatus(RefreshingRepos);
-    auto t = new PackageKit::Transaction();
-    connect(t, &PackageKit::Transaction::finished, t, &PackageKit::Transaction::deleteLater);
-    connect(t, &PackageKit::Transaction::errorCode, mZypp, &OrnZypp::pkError);
-    connect(t, &PackageKit::Transaction::finished, this, &OrnBackup::pSearchPackages);
-    t->refreshCache(false);
+    auto t = OrnPm::instance()->d_ptr->transaction();
+    connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(pSearchPackages()));
+    qDebug().nospace() << "Calling " << t << "->" PK_METHOD_REFRESHCACHE "(false)";
+    t->asyncCall(QStringLiteral(PK_METHOD_REFRESHCACHE), false);
 }

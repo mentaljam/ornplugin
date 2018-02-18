@@ -1,6 +1,5 @@
 #include "ornpm_p.h"
 #include "ornpackageversion.h"
-#include "orninstalledpackage.h"
 #include "ornrepo.h"
 #include "orn.h"
 
@@ -729,10 +728,20 @@ QList<OrnRepo> OrnPm::repoList() const
 
 void OrnPm::getInstalledPackages(const QString &packageName)
 {
-    QtConcurrent::run(d_ptr, &OrnPmPrivate::prepareInstalledPackages, packageName);
+    auto watcher = new QFutureWatcher<OrnInstalledPackageList>();
+    connect(watcher, &QFutureWatcher<OrnInstalledPackageList>::finished, [this, watcher]()
+    {
+        auto res = watcher->result();
+        if (!res.isEmpty())
+        {
+            emit this->installedPackages(res);
+        }
+        watcher->deleteLater();
+    });
+    watcher->setFuture(QtConcurrent::run(d_ptr, &OrnPmPrivate::prepareInstalledPackages, packageName));
 }
 
-void OrnPmPrivate::prepareInstalledPackages(const QString &packageName)
+OrnInstalledPackageList OrnPmPrivate::prepareInstalledPackages(const QString &packageName)
 {
     Q_ASSERT_X(packageName.isEmpty() || installedPackages.contains(packageName), Q_FUNC_INFO,
                qPrintable(QString("The provided package \"%0\" is not installed").arg(packageName)));
@@ -743,7 +752,7 @@ void OrnPmPrivate::prepareInstalledPackages(const QString &packageName)
     {
         qWarning() << "Installed packages or repositories list is empty";
         emit q_ptr->installedPackages(packages);
-        return;
+        return packages;
     }
     qDebug() << "Preparing installed packages list";
 
@@ -869,5 +878,5 @@ void OrnPmPrivate::prepareInstalledPackages(const QString &packageName)
         };
     }
 
-    emit q_ptr->installedPackages(packages);
+    return packages;
 }

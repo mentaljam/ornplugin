@@ -16,7 +16,7 @@
 #include "orncommentsmodel.h"
 #include "orncategoriesmodel.h"
 #include "ornbookmarksmodel.h"
-//#include "ornbackup.h"
+#include "ornbackup.h"
 
 #include <qqml.h>
 #include <QNetworkAccessManager>
@@ -44,7 +44,7 @@ void OrnPlugin::registerTypes(const char *uri)
     qmlRegisterType<OrnCommentsModel>     (uri, 1, 0, "OrnCommentsModel");
     qmlRegisterType<OrnCategoriesModel>   (uri, 1, 0, "OrnCategoriesModel");
     qmlRegisterType<OrnBookmarksModel>    (uri, 1, 0, "OrnBookmarksModel");
-//    qmlRegisterType<OrnBackup>            (uri, 1, 0, "OrnBackup");
+    qmlRegisterType<OrnBackup>            (uri, 1, 0, "OrnBackup");
 
     qmlRegisterSingletonType<OrnClient>   (uri, 1, 0, "OrnClient", OrnClient::qmlInstance);
     qmlRegisterSingletonType<OrnPm>       (uri, 1, 0, "OrnPm",     OrnPm::qmlInstance);

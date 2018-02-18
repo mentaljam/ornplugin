@@ -4,9 +4,6 @@
 #include <QObject>
 #include <QHash>
 #include <QVariant>
-#include <QSet>
-
-class OrnZypp;
 
 class OrnBackup : public QObject
 {
@@ -34,7 +31,7 @@ public:
     };
     Q_ENUMS(Error)
 
-    explicit OrnBackup(QObject *parent = 0);
+    explicit OrnBackup(QObject *parent = nullptr);
 
     Status status() const;
 
@@ -42,7 +39,6 @@ public:
     Q_INVOKABLE void backup(const QString &filePath);
     Q_INVOKABLE void restore(const QString &filePath);
     Q_INVOKABLE QStringList notFound() const;
-    Q_INVOKABLE static bool removeFile(const QString &filePath);
 
 signals:
     void statusChanged();
@@ -52,7 +48,7 @@ signals:
 
 private slots:
     void pSearchPackages();
-    void pAddPackage(int info, const QString &packageId, const QString &summary);
+    void pAddPackage(quint32 info, const QString &packageId, const QString &summary);
     void pInstallPackages();
     void pFinishRestore();
 
@@ -63,9 +59,7 @@ private:
     void pRefreshRepos();
 
 private:
-    OrnZypp *mZypp;
     Status mStatus;
-    QStringList::size_type mSearchIndex;
     QString mFilePath;
     QStringList mNamesToSearch;
     // Name, version
