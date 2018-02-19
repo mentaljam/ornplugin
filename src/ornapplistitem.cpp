@@ -8,21 +8,21 @@
 
 #include <QDebug>
 
-OrnAppListItem::OrnAppListItem(QObject *parent) :
-    QObject(parent)
+OrnAppListItem::OrnAppListItem(QObject *parent)
+    : QObject(parent)
 {
     Q_ASSERT_X(false, Q_FUNC_INFO, "This constructor is only for moc");
 }
 
-OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject, QObject *parent) :
-    QObject(parent),
-    mAppId(jsonObject[QStringLiteral("appid")].toVariant().toUInt()),
-    mCreated(Orn::toUint(jsonObject[QStringLiteral("created")])),
-    mUpdated(Orn::toUint(jsonObject[QStringLiteral("updated")])),
-    mTitle(Orn::toString(jsonObject[QStringLiteral("title")])),
-    mUserName(Orn::toString(jsonObject[QStringLiteral("user")].toObject()[QStringLiteral("name")])),
-    mIconSource(Orn::toString(jsonObject[QStringLiteral("icon")].toObject()[QStringLiteral("url")])),
-    mSinceUpdate(sinceLabel(mCreated))
+OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject, QObject *parent)
+    : QObject(parent)
+    , mAppId(jsonObject[QStringLiteral("appid")].toVariant().toUInt())
+    , mCreated(Orn::toUint(jsonObject[QStringLiteral("created")]))
+    , mUpdated(Orn::toUint(jsonObject[QStringLiteral("updated")]))
+    , mTitle(Orn::toString(jsonObject[QStringLiteral("title")]))
+    , mUserName(Orn::toString(jsonObject[QStringLiteral("user")].toObject()[QStringLiteral("name")]))
+    , mIconSource(Orn::toString(jsonObject[QStringLiteral("icon")].toObject()[QStringLiteral("url")]))
+    , mSinceUpdate(sinceLabel(mCreated))
 {
     QString ratingKey(QStringLiteral("rating"));
     auto ratingObject = jsonObject[ratingKey].toObject();
@@ -34,10 +34,15 @@ OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject, QObject *parent) :
     mCategory = OrnCategoryListItem::categoryName(tid);
 }
 
+QDate OrnAppListItem::createDate() const
+{
+    return QDateTime::fromMSecsSinceEpoch(quint64(mCreated) * 1000).date();
+}
+
 QString OrnAppListItem::sinceLabel(const quint32 &value)
 {
     auto curDate = QDate::currentDate();
-    auto date = QDateTime::fromMSecsSinceEpoch((quint64)value * 1000).date();
+    auto date = QDateTime::fromMSecsSinceEpoch(quint64(value) * 1000).date();
     auto days = date.daysTo(curDate);
     if (days == 0)
     {

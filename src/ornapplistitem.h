@@ -2,6 +2,7 @@
 #define ORNAPPLISTITEM_H
 
 #include <QObject>
+#include <QDate>
 
 // TODO: add "installed" property
 class OrnAppListItem : public QObject
@@ -9,8 +10,10 @@ class OrnAppListItem : public QObject
     friend class OrnAbstractAppsModel;
 
     Q_OBJECT
+
     Q_PROPERTY(quint32 appId MEMBER mAppId CONSTANT)
     Q_PROPERTY(quint32 created MEMBER mCreated CONSTANT)
+    Q_PROPERTY(QDate createDate READ createDate CONSTANT)
     Q_PROPERTY(quint32 updated MEMBER mUpdated CONSTANT)
     Q_PROPERTY(quint32 ratingCount MEMBER mRatingCount CONSTANT)
     Q_PROPERTY(float   rating MEMBER mRating CONSTANT)
@@ -23,6 +26,8 @@ class OrnAppListItem : public QObject
 public:
     explicit OrnAppListItem(QObject *parent = nullptr);
     OrnAppListItem(const QJsonObject &jsonObject, QObject *parent = nullptr);
+
+    QDate createDate() const;
 
 private:
     static QString sinceLabel(const quint32 &value);
