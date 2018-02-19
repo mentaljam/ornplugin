@@ -99,7 +99,7 @@ public:
     QString deviceModel() const;
 
     bool updatesAvailable() const;
-    QStringList updatablePackages() const;
+    Q_INVOKABLE QStringList updatablePackages() const;
 
     RepoStatus repoStatus(const QString &alias) const;
     PackageStatus packageStatus(const QString &packageName) const;
