@@ -3,8 +3,6 @@
 
 #include <QObject>
 
-class QTimer;
-
 class OrnCommentListItem : public QObject
 {
     friend class OrnCommentsModel;
@@ -12,18 +10,15 @@ class OrnCommentListItem : public QObject
     Q_OBJECT
     Q_PROPERTY(quint32 commentId MEMBER mCid CONSTANT)
     Q_PROPERTY(quint32 parentId MEMBER mPid CONSTANT)
+    Q_PROPERTY(quint32 created MEMBER mCreated CONSTANT)
     Q_PROPERTY(quint32 userId MEMBER mUserId CONSTANT)
     Q_PROPERTY(QString userName MEMBER mUserName CONSTANT)
     Q_PROPERTY(QString userIconSource MEMBER mUserIconSource CONSTANT)
     Q_PROPERTY(QString text MEMBER mText CONSTANT)
-    Q_PROPERTY(QString date MEMBER mDate CONSTANT)
 
 public:
     explicit OrnCommentListItem(QObject *parent = nullptr);
     OrnCommentListItem(const QJsonObject &jsonObject, QObject *parent = nullptr);
-
-private:
-    static QString sinceCreated(const quint64 &created);
 
 private:
     quint32 mCid;
@@ -33,8 +28,6 @@ private:
     QString mUserName;
     QString mUserIconSource;
     QString mText;
-    QString mDate;
-    QTimer  *mCreatedTimer;
 };
 
 #endif // ORNCOMMENTLISTITEM_H
