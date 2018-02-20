@@ -4,6 +4,8 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QDir>
+#include <QNetworkAccessManager>
+#include <QCoreApplication>
 
 #include <QDebug>
 
@@ -31,6 +33,17 @@ QString locate(const QString &filename)
         return QString();
     }
     return dir.absoluteFilePath(filename);
+}
+
+static QNetworkAccessManager *nam = nullptr;
+
+QNetworkAccessManager *networkAccessManager()
+{
+    if (!nam)
+    {
+        nam = new QNetworkAccessManager(qApp);
+    }
+    return nam;
 }
 
 } // namespace Orn

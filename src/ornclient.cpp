@@ -31,8 +31,6 @@
 
 OrnClient *OrnClient::gInstance = nullptr;
 
-extern QNetworkAccessManager *ornNetworkAccessManager;
-
 OrnClient::OrnClient(QObject *parent)
     : OrnApiRequest(parent)
     , mSettings(new QSettings(this))
@@ -44,7 +42,7 @@ OrnClient::OrnClient(QObject *parent)
         qDebug() << "Checking authorisation status";
         auto request = this->authorisedRequest();
         request.setUrl(OrnClient::apiUrl(QStringLiteral("session")));
-        mNetworkReply = ornNetworkAccessManager->get(request);
+        mNetworkReply = Orn::networkAccessManager()->get(request);
         connect(mNetworkReply, &QNetworkReply::finished, [=]()
         {
 #ifdef QT_DEBUG
@@ -187,7 +185,7 @@ void OrnClient::login(const QString &username, const QString &password)
     jsonObject.insert(QStringLiteral("password"), password);
     QJsonDocument jsonDoc(jsonObject);
 
-    mNetworkReply = ornNetworkAccessManager->post(request, jsonDoc.toJson());
+    mNetworkReply = Orn::networkAccessManager()->post(request, jsonDoc.toJson());
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onLoggedIn);
 }
 
@@ -214,7 +212,7 @@ void OrnClient::comment(const quint32 &appId, const QString &body, const quint32
         commentObject.insert(QStringLiteral("pid"), QString::number(parentId));
     }
 
-    mNetworkReply = ornNetworkAccessManager->post(
+    mNetworkReply = Orn::networkAccessManager()->post(
                 request, QJsonDocument(commentObject).toJson());
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onNewComment);
 }
@@ -227,7 +225,7 @@ void OrnClient::editComment(const quint32 &commentId, const QString &body)
     QJsonObject commentObject;
     OrnClient::prepareComment(commentObject, body);
 
-    mNetworkReply = ornNetworkAccessManager->put(
+    mNetworkReply = Orn::networkAccessManager()->put(
                 request, QJsonDocument(commentObject).toJson());
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onCommentEdited);
 }

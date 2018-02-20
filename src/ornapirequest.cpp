@@ -1,4 +1,5 @@
 #include "ornapirequest.h"
+#include "orn.h"
 
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -9,8 +10,6 @@ const QByteArray OrnApiRequest::langName(QByteArrayLiteral("Accept-Language"));
 const QByteArray OrnApiRequest::langValue(QLocale::system().name().left(2).toUtf8());
 const QByteArray OrnApiRequest::platformName(QByteArrayLiteral("Warehouse-Platform"));
 const QByteArray OrnApiRequest::platformValue(QByteArrayLiteral("SailfishOS"));
-
-extern QNetworkAccessManager *ornNetworkAccessManager;
 
 OrnApiRequest::OrnApiRequest(QObject *parent)
     : QObject(parent)
@@ -33,7 +32,7 @@ void OrnApiRequest::run(const QNetworkRequest &request)
         return;
     }
     qDebug() << "Fetching data from" << request.url().toString();
-    mNetworkReply = ornNetworkAccessManager->get(request);
+    mNetworkReply = Orn::networkAccessManager()->get(request);
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnApiRequest::onReplyFinished);
 }
 

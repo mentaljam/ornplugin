@@ -19,16 +19,9 @@
 #include "ornbackup.h"
 
 #include <qqml.h>
-#include <QNetworkAccessManager>
-
-/// The global pointer to the instance of network access manager
-QNetworkAccessManager *ornNetworkAccessManager = nullptr;
 
 void OrnPlugin::registerTypes(const char *uri)
 {
-    Q_ASSERT_X(!ornNetworkAccessManager, Q_FUNC_INFO, "ornNetworkAccessManager is already initialized");
-    ornNetworkAccessManager = new QNetworkAccessManager();
-
     qmlRegisterType<OrnApiRequest>        (uri, 1, 0, "OrnApiRequest");
     qmlRegisterType<OrnApplication>       (uri, 1, 0, "OrnApplication");
     qmlRegisterType<OrnAppListItem>       (uri, 1, 0, "OrnAppListItem");

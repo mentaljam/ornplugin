@@ -4,6 +4,8 @@
 #include <QDateTime>
 #include <QJsonValue>
 
+class QNetworkAccessManager;
+
 namespace Orn
 {
 
@@ -45,6 +47,8 @@ inline QString packageRepo(const QString &id)
 {
     return id.section(QChar(';'), 3, 3);
 }
+
+QNetworkAccessManager *networkAccessManager();
 
 } // namespace Orn
 

@@ -6,8 +6,6 @@
 #include <QNetworkReply>
 #include <QDebug>
 
-extern QNetworkAccessManager *ornNetworkAccessManager;
-
 OrnCommentsModel::OrnCommentsModel(QObject *parent) :
     OrnAbstractListModel(false, parent)
 {
@@ -106,7 +104,7 @@ QNetworkReply *OrnCommentsModel::fetchComment(const quint32 &cid)
     auto request = OrnApiRequest::networkRequest();
     request.setUrl(url);
     qDebug() << "Fetching data from" << request.url().toString();
-    return ornNetworkAccessManager->get(request);
+    return Orn::networkAccessManager()->get(request);
 }
 
 QJsonObject OrnCommentsModel::processReply(QNetworkReply *reply)
