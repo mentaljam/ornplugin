@@ -36,16 +36,12 @@ void OrnApiRequest::run(const QNetworkRequest &request)
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnApiRequest::onReplyFinished);
 }
 
-QUrl OrnApiRequest::apiUrl(const QString &resource)
-{
-    return QUrl(apiUrlPrefix + resource);
-}
-
-QNetworkRequest OrnApiRequest::networkRequest()
+QNetworkRequest OrnApiRequest::networkRequest(const QUrl &url)
 {
     QNetworkRequest request;
     request.setRawHeader(langName, langValue);
     request.setRawHeader(platformName, platformValue);
+    request.setUrl(url);
     return request;
 }
 

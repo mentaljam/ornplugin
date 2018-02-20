@@ -101,9 +101,8 @@ QNetworkReply *OrnCommentsModel::fetchComment(const quint32 &cid)
 {
     // FIXME: need refactoring
     auto url = OrnApiRequest::apiUrl(QStringLiteral("comments/%0").arg(cid));
-    auto request = OrnApiRequest::networkRequest();
-    request.setUrl(url);
-    qDebug() << "Fetching data from" << request.url().toString();
+    auto request = OrnApiRequest::networkRequest(url);
+    qDebug() << "Fetching data from" << url.toString();
     return Orn::networkAccessManager()->get(request);
 }
 

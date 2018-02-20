@@ -2,6 +2,7 @@
 #define ORNAPIREQUEST_H
 
 #include <QObject>
+#include <QUrl>
 
 class QNetworkReply;
 class QNetworkRequest;
@@ -16,8 +17,9 @@ public:
 
     void run(const QNetworkRequest &request);
 
-    static QUrl apiUrl(const QString &resource);
-    static QNetworkRequest networkRequest();
+    inline static QUrl apiUrl(const QString &resource) { return QUrl(apiUrlPrefix + resource); }
+
+    static QNetworkRequest networkRequest(const QUrl &url);
 
 public slots:
     void reset();

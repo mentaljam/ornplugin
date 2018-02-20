@@ -45,8 +45,7 @@ void OrnAbstractListModel::apiCall(const QString &resource, QUrlQuery query)
     {
         url.setQuery(query);
     }
-    auto request = OrnApiRequest::networkRequest();
-    request.setUrl(url);
+    auto request = OrnApiRequest::networkRequest(url);
     mApiRequest->run(request);
 }
 

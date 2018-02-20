@@ -153,8 +153,7 @@ QString OrnApplication::category() const
 void OrnApplication::ornRequest()
 {
     auto url = OrnApiRequest::apiUrl(QStringLiteral("apps/%0").arg(mAppId));
-    auto request = OrnApiRequest::networkRequest();
-    request.setUrl(url);
+    auto request = OrnApiRequest::networkRequest(url);
     this->run(request);
 }
 
