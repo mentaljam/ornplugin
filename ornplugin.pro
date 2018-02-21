@@ -1,6 +1,6 @@
 TEMPLATE = lib
 TARGET = ornplugin
-QT += qml quick
+QT += qml quick dbus
 CONFIG += qt plugin static c++11
 CONFIG(release, debug|release): DEFINES += QT_NO_DEBUG_OUTPUT
 VERSION = 0.1

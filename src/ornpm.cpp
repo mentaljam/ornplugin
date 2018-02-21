@@ -4,6 +4,7 @@
 #include "orn.h"
 
 #include <solv/repo_solv.h>
+#include <connman-qt5/networkmanager.h>
 
 #include <QtConcurrent/QtConcurrent>
 
@@ -13,6 +14,12 @@ using namespace PackageKit;
 
 #define CHECK_INITIALISED() \
     Q_ASSERT_X(d_ptr->initialised, Q_FUNC_INFO, "Call only after OrnPm was initialised!")
+
+#define CHECK_NETWORK() \
+    if (NetworkManager::instance()->state() != QLatin1String("online")) { \
+        qWarning("Network is unavailable!"); \
+        return; \
+    }
 
 #define SET_OPERATION_ITEM(operation, item) \
     CHECK_INITIALISED(); \
@@ -244,6 +251,7 @@ void OrnPm::emitError(quint32 code, QString details)
 
 void OrnPm::getUpdates()
 {
+    CHECK_NETWORK();
     auto t = d_ptr->transaction();
     connect(t, SIGNAL(Package(quint32,QString,QString)), this, SLOT(onPackageUpdate(quint32,QString,QString)));
     connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(onGetUpdatesFinished(quint32,quint32)));
@@ -394,6 +402,7 @@ void OrnPmPrivate::preparePackageVersions(const QString &packageName)
 
 void OrnPm::installPackage(const QString &packageId)
 {
+    CHECK_NETWORK();
     SET_OPERATION_ITEM(InstallingPackage, Orn::packageName(packageId));
 
     auto t = d_ptr->transaction();
@@ -462,6 +471,7 @@ void OrnPm::updatePackage(const QString &packageName)
         qWarning() << "The package" << packageName << "has no updates!";
         return;
     }
+    CHECK_NETWORK();
     SET_OPERATION_ITEM(UpdatingPackage, packageName);
 
     auto packageId = d_ptr->updatablePackages[packageName];
@@ -496,6 +506,7 @@ void OrnPm::onPackageUpdated(quint32 exit, quint32 runtime)
 
 void OrnPm::addRepo(const QString &author)
 {
+    CHECK_NETWORK();
     CHECK_INITIALISED();
 
     auto repoAlias = repoNamePrefix + author;
@@ -514,6 +525,7 @@ void OrnPm::addRepo(const QString &author)
 
 void OrnPm::modifyRepo(const QString &repoAlias, const OrnPm::RepoAction &action)
 {
+    CHECK_NETWORK();
     Operation op;
     switch (action)
     {
@@ -551,6 +563,7 @@ void OrnPm::enableRepos(bool enable)
 
 void OrnPmPrivate::enableRepos(bool enable)
 {
+    CHECK_NETWORK();
     qDebug() << (enable ? "Enabling" : "Disabling") << "all repositories";
     QString method(QStringLiteral(SSU_METHOD_MODIFYREPO));
 
@@ -642,6 +655,7 @@ void OrnPmPrivate::onRepoModified(const QString &repoAlias, const OrnPm::RepoAct
 
 void OrnPm::refreshRepo(const QString &repoAlias, bool force)
 {
+    CHECK_NETWORK();
     SET_OPERATION_ITEM(RefreshingRepo, repoAlias);
     auto t = d_ptr->transaction();
     connect(t, &QDBusInterface::destroyed, [this, repoAlias]()
@@ -657,6 +671,7 @@ void OrnPm::refreshRepo(const QString &repoAlias, bool force)
 
 void OrnPm::refreshRepos(bool force)
 {
+    CHECK_NETWORK();
     SET_OPERATION_ITEM(RefreshingAllRepos, QStringLiteral("refresh-repos"));
 
     for (auto it = d_ptr->repos.cbegin(); it != d_ptr->repos.cend(); ++it)
@@ -693,11 +708,23 @@ void OrnPm::refreshNextRepo(quint32 exit, quint32 runtime)
     Q_UNUSED(runtime)
 #endif
 
+    bool offline = NetworkManager::instance()->state() != QLatin1String("online");
+    if (offline)
+    {
+        d_ptr->reposToRefresh.clear();
+    }
     if (d_ptr->reposToRefresh.isEmpty())
     {
 #ifdef QT_DEBUG
-        qDebug() << "Finished refreshing cache for all ORN repositories in"
-                 << d_ptr->refreshRuntime << "msec";
+        if (offline)
+        {
+            qWarning("Aborting operation due to network gone offline");
+        }
+        else
+        {
+            qDebug() << "Finished refreshing cache for all ORN repositories in"
+                     << d_ptr->refreshRuntime << "msec";
+        }
 #endif
         d_ptr->pkInterface->blockSignals(false);
         d_ptr->operations.remove(QStringLiteral("refresh-repos"));
