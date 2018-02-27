@@ -8,6 +8,7 @@
 class OrnAppListItem : public QObject
 {
     friend class OrnAbstractAppsModel;
+    friend class OrnBookmarksModel;
 
     Q_OBJECT
 

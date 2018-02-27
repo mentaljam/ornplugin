@@ -1,9 +1,13 @@
 #include "ornbookmarksmodel.h"
-#include "ornapplication.h"
+#include "ornapplistitem.h"
 #include "ornclient.h"
+#include "orn.h"
+
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 
 OrnBookmarksModel::OrnBookmarksModel(QObject *parent) :
-    OrnAbstractListModel(false, parent)
+    OrnAbstractAppsModel(false, parent)
 {
     connect(OrnClient::instance(), &OrnClient::bookmarkChanged,
             this, &OrnBookmarksModel::onBookmarkChanged);
@@ -20,7 +24,7 @@ void OrnBookmarksModel::onBookmarkChanged(quint32 appId, bool bookmarked)
         auto s = mData.size();
         for (int i = 0; i < s; ++i)
         {
-            auto app = static_cast<OrnApplication *>(mData[i]);
+            auto app = static_cast<OrnAppListItem *>(mData[i]);
             if (app->mAppId == appId)
             {
                 qDebug() << "Removing app" << appId << "from bookmarks model";
@@ -37,37 +41,33 @@ void OrnBookmarksModel::onBookmarkChanged(quint32 appId, bool bookmarked)
 void OrnBookmarksModel::addApp(const quint32 &appId)
 {
     qDebug() << "Adding app" << appId << "to bookmarks model";
-    auto app = new OrnApplication(this);
-    app->setAppId(appId);
-    connect(app, &OrnApplication::ornRequestFinished, [=]()
+    auto url = OrnApiRequest::apiUrl(QString::number(appId).prepend("apps/"));
+    auto request = OrnApiRequest::networkRequest(url);
+    auto reply = Orn::networkAccessManager()->get(request);
+    connect(reply, &QNetworkReply::finished, [this, reply]()
     {
-        auto s = mData.size();
-        this->beginInsertRows(QModelIndex(), s, s);
-        mData << app;
-        this->endInsertRows();
+        if (reply->error() == QNetworkReply::NoError)
+        {
+            QJsonParseError error;
+            auto jsonDoc = QJsonDocument::fromJson(reply->readAll(), &error);
+            if (error.error == QJsonParseError::NoError)
+            {
+                QJsonArray arr;
+                arr.append(jsonDoc.object());
+                emit mApiRequest->jsonReady(QJsonDocument(arr));
+            }
+            else
+            {
+                qCritical() << "Could not parse reply:" << error.errorString();
+            }
+        }
+        else
+        {
+            qDebug() << "Network request error" << reply->error()
+                     << "-" << reply->errorString();
+        }
+        reply->deleteLater();
     });
-    app->ornRequest();
-}
-
-QVariant OrnBookmarksModel::data(const QModelIndex &index, int role) const
-{
-    if (!index.isValid())
-    {
-        return QVariant();
-    }
-
-    auto app = static_cast<OrnApplication *>(mData[index.row()]);
-    switch (role)
-    {
-    case DataRole:
-        return QVariant::fromValue(app);
-    case SortRole:
-        return app->mTitle;
-    case SectionRole:
-        return app->mTitle.at(0).toUpper();
-    default:
-        return QVariant();
-    }
 }
 
 void OrnBookmarksModel::fetchMore(const QModelIndex &parent)
@@ -76,17 +76,9 @@ void OrnBookmarksModel::fetchMore(const QModelIndex &parent)
     {
         return;
     }
+
     for (const auto &appid : OrnClient::instance()->bookmarks())
     {
         this->addApp(appid);
     }
-    mCanFetchMore = false;
-}
-
-QHash<int, QByteArray> OrnBookmarksModel::roleNames() const
-{
-    return {
-        { DataRole,    "appData" },
-        { SectionRole, "section" }
-    };
 }
