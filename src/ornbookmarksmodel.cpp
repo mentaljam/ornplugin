@@ -41,7 +41,7 @@ void OrnBookmarksModel::onBookmarkChanged(quint32 appId, bool bookmarked)
 void OrnBookmarksModel::addApp(const quint32 &appId)
 {
     qDebug() << "Adding app" << appId << "to bookmarks model";
-    auto url = OrnApiRequest::apiUrl(QString::number(appId).prepend("apps/"));
+    auto url = OrnApiRequest::apiUrl(QStringLiteral("apps/%1/compact").arg(appId));
     auto request = OrnApiRequest::networkRequest(url);
     auto reply = Orn::networkAccessManager()->get(request);
     connect(reply, &QNetworkReply::finished, [this, reply]()
