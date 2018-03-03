@@ -9,6 +9,8 @@ OrnAbstractAppsModel::OrnAbstractAppsModel(bool fetchable, QObject *parent)
     connect(OrnPm::instance(), &OrnPm::packageStatusChanged,
             [this](const QString &packageName, const OrnPm::PackageStatus &status)
     {
+        Q_UNUSED(status)
+
         auto size = mData.size();
         for (int i = 0; i < size; ++i)
         {
