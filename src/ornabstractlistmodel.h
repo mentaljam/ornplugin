@@ -1,6 +1,7 @@
 #ifndef ORNABSTRACTLISTMODEL_H
 #define ORNABSTRACTLISTMODEL_H
 
+
 #include <QAbstractListModel>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -19,6 +20,7 @@ class OrnAbstractListModel : public QAbstractListModel
 
 public:
     OrnAbstractListModel(bool fetchable, QObject *parent = nullptr);
+    ~OrnAbstractListModel();
 
     OrnApiRequest *apiRequest() const;
 
@@ -58,8 +60,8 @@ protected:
             for (const QJsonValueRef &jsonValue: jsonArray)
             {
                 // Each class of list item should implement a constructor
-                // SomeListItem(const QJsonValue &, QObject *)
-                list << new T(jsonValue.toObject(), this);
+                // SomeListItem(const QJsonObject &)
+                list << new T(jsonValue.toObject());
             }
             auto row = mData.size();
             this->beginInsertRows(QModelIndex(), row, row + list.size() - 1);

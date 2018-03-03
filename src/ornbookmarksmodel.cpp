@@ -31,7 +31,7 @@ void OrnBookmarksModel::onBookmarkChanged(quint32 appId, bool bookmarked)
                 this->beginRemoveRows(QModelIndex(), i, i);
                 mData.removeAt(i);
                 this->endRemoveRows();
-                app->deleteLater();
+                delete app;
                 return;
             }
         }

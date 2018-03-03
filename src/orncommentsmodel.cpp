@@ -65,7 +65,7 @@ void OrnCommentsModel::addComment(const quint32 &cid)
             return;
         }
         this->beginInsertRows(QModelIndex(), 0, 0);
-        mData.prepend(new OrnCommentListItem(jsonObject, this));
+        mData.prepend(new OrnCommentListItem(jsonObject));
         this->endInsertRows();
     });
 }

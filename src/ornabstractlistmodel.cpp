@@ -14,6 +14,11 @@ OrnAbstractListModel::OrnAbstractListModel(bool fetchable, QObject *parent) :
     connect(mApiRequest, &OrnApiRequest::jsonReady, this, &OrnAbstractListModel::onJsonReady);
 }
 
+OrnAbstractListModel::~OrnAbstractListModel()
+{
+    qDeleteAll(mData);
+}
+
 OrnApiRequest *OrnAbstractListModel::apiRequest() const
 {
     return mApiRequest;

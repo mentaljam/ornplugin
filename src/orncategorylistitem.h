@@ -1,7 +1,11 @@
 #ifndef ORNCATEGORYLISTITEM_H
 #define ORNCATEGORYLISTITEM_H
 
+
 #include <QObject>
+#include <QMap>
+
+class QJsonObject;
 
 class OrnCategoryListItem : public QObject
 {
@@ -14,13 +18,12 @@ class OrnCategoryListItem : public QObject
     Q_PROPERTY(QString name MEMBER mName CONSTANT)
 
 public:
-    explicit OrnCategoryListItem(QObject *parent = nullptr);
-    OrnCategoryListItem(const QJsonObject &jsonObject, QObject *parent = nullptr);
+    OrnCategoryListItem(const QJsonObject &jsonObject);
 
     static QString categoryName(const quint32 &tid);
 
 private:
-    static QObjectList parse(const QJsonObject &jsonObject, QObject *parent = nullptr);
+    static QObjectList parse(const QJsonObject &jsonObject);
 
 private:
     quint32 mTid;

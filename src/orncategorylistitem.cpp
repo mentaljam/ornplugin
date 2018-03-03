@@ -77,21 +77,12 @@ const QMap<quint32, const char*> OrnCategoryListItem::categories{
     {  247, QT_TRID_NOOP("orn-cat-libraries") }
 };
 
-OrnCategoryListItem::OrnCategoryListItem(QObject *parent) :
-    QObject(parent)
-{
-    Q_ASSERT_X(false, Q_FUNC_INFO, "This constructor is only for moc");
-}
-
-OrnCategoryListItem::OrnCategoryListItem(const QJsonObject &jsonObject, QObject *parent) :
-    QObject(parent),
-    mTid(Orn::toUint(jsonObject[QStringLiteral("tid")])),
-    mAppsCount(Orn::toUint(jsonObject[QStringLiteral("apps_count")])),
-    mDepth(jsonObject[QStringLiteral("depth")].toVariant().toUInt()),
-    mName(categoryName(mTid))
-{
-
-}
+OrnCategoryListItem::OrnCategoryListItem(const QJsonObject &jsonObject)
+    : mTid(Orn::toUint(jsonObject[QStringLiteral("tid")]))
+    , mAppsCount(Orn::toUint(jsonObject[QStringLiteral("apps_count")]))
+    , mDepth(jsonObject[QStringLiteral("depth")].toVariant().toUInt())
+    , mName(categoryName(mTid))
+{}
 
 QString OrnCategoryListItem::categoryName(const quint32 &tid)
 {
@@ -108,7 +99,7 @@ QString OrnCategoryListItem::categoryName(const quint32 &tid)
     }
 }
 
-QObjectList OrnCategoryListItem::parse(const QJsonObject &jsonObject, QObject *parent)
+QObjectList OrnCategoryListItem::parse(const QJsonObject &jsonObject)
 {
     QObjectList list;
     QString childrenKey(QStringLiteral("childrens"));
@@ -117,7 +108,7 @@ QObjectList OrnCategoryListItem::parse(const QJsonObject &jsonObject, QObject *p
         auto childrenArray = jsonObject[childrenKey].toArray();
         for (const auto &child: childrenArray)
         {
-            list << OrnCategoryListItem::parse(child.toObject(), parent);
+            list << OrnCategoryListItem::parse(child.toObject());
         }
         std::sort(list.begin(), list.end(), [](QObject *a, QObject *b)
         {
@@ -126,6 +117,6 @@ QObjectList OrnCategoryListItem::parse(const QJsonObject &jsonObject, QObject *p
         });
 
     }
-    list.prepend(new OrnCategoryListItem(jsonObject, parent));
+    list.prepend(new OrnCategoryListItem(jsonObject));
     return list;
 }

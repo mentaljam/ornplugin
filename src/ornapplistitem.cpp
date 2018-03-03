@@ -8,15 +8,8 @@
 #include <QVariant>
 
 
-OrnAppListItem::OrnAppListItem(QObject *parent)
-    : QObject(parent)
-{
-    Q_ASSERT_X(false, Q_FUNC_INFO, "This constructor is only for moc");
-}
-
-OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject, QObject *parent)
-    : QObject(parent)
-    , mAppId(jsonObject[QStringLiteral("appid")].toVariant().toUInt())
+OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject)
+    : mAppId(jsonObject[QStringLiteral("appid")].toVariant().toUInt())
     , mCreated(Orn::toUint(jsonObject[QStringLiteral("created")]))
     , mUpdated(Orn::toUint(jsonObject[QStringLiteral("updated")]))
     , mTitle(Orn::toString(jsonObject[QStringLiteral("title")]))

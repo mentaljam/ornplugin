@@ -1,7 +1,11 @@
 #ifndef ORNCOMMENTLISTITEM_H
 #define ORNCOMMENTLISTITEM_H
 
+
 #include <QObject>
+#include <QString>
+
+class QJsonObject;
 
 class OrnCommentListItem : public QObject
 {
@@ -17,8 +21,7 @@ class OrnCommentListItem : public QObject
     Q_PROPERTY(QString text MEMBER mText CONSTANT)
 
 public:
-    explicit OrnCommentListItem(QObject *parent = nullptr);
-    OrnCommentListItem(const QJsonObject &jsonObject, QObject *parent = nullptr);
+    OrnCommentListItem(const QJsonObject &jsonObject);
 
 private:
     quint32 mCid;

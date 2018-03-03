@@ -3,9 +3,6 @@
 #include "ornclient.h"
 #include "ornpm.h"
 #include "ornapplication.h"
-#include "ornapplistitem.h"
-#include "orncommentlistitem.h"
-#include "orncategorylistitem.h"
 #include "ornrecentappsmodel.h"
 #include "ornuserappsmodel.h"
 #include "ornsearchappsmodel.h"
@@ -18,15 +15,16 @@
 #include "ornbookmarksmodel.h"
 #include "ornbackup.h"
 
+#include "ornapplistitem.h"
+#include "orncommentlistitem.h"
+#include "orncategorylistitem.h"
+
 #include <qqml.h>
 
 void OrnPlugin::registerTypes(const char *uri)
 {
     qmlRegisterType<OrnApiRequest>        (uri, 1, 0, "OrnApiRequest");
     qmlRegisterType<OrnApplication>       (uri, 1, 0, "OrnApplication");
-    qmlRegisterType<OrnAppListItem>       (uri, 1, 0, "OrnAppListItem");
-    qmlRegisterType<OrnCommentListItem>   (uri, 1, 0, "OrnCommentListItem");
-    qmlRegisterType<OrnCategoryListItem>  (uri, 1, 0, "OrnCategoryListItem");
     qmlRegisterType<OrnRecentAppsModel>   (uri, 1, 0, "OrnRecentAppsModel");
     qmlRegisterType<OrnUserAppsModel>     (uri, 1, 0, "OrnUserAppsModel");
     qmlRegisterType<OrnSearchAppsModel>   (uri, 1, 0, "OrnSearchAppsModel");
@@ -41,6 +39,10 @@ void OrnPlugin::registerTypes(const char *uri)
 
     qmlRegisterSingletonType<OrnClient>   (uri, 1, 0, "OrnClient", OrnClient::qmlInstance);
     qmlRegisterSingletonType<OrnPm>       (uri, 1, 0, "OrnPm",     OrnPm::qmlInstance);
+
+    qmlRegisterUncreatableType<OrnAppListItem>     (uri, 1, 0, "OrnAppListItem", "uncreatable");
+    qmlRegisterUncreatableType<OrnCommentListItem> (uri, 1, 0, "OrnCommentListItem", "uncreatable");
+    qmlRegisterUncreatableType<OrnCategoryListItem>(uri, 1, 0, "OrnCategoryListItem", "uncreatable");
 
     qRegisterMetaType<QList<OrnInstalledPackage>>();
     qRegisterMetaType<QList<OrnPackageVersion>>();

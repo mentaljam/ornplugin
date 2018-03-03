@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QDate>
 
+class QJsonObject;
+
 class OrnAppListItem : public QObject
 {
     friend class OrnAbstractAppsModel;
@@ -25,8 +27,7 @@ class OrnAppListItem : public QObject
     Q_PROPERTY(QString package MEMBER mPackage CONSTANT)
 
 public:
-    explicit OrnAppListItem(QObject *parent = nullptr);
-    OrnAppListItem(const QJsonObject &jsonObject, QObject *parent = nullptr);
+    OrnAppListItem(const QJsonObject &jsonObject);
 
     QDate createDate() const;
 

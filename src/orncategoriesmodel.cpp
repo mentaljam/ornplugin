@@ -50,7 +50,7 @@ void OrnCategoriesModel::onJsonReady(const QJsonDocument &jsonDoc)
     QObjectList list;
     for (const auto &category: categoriesArray)
     {
-        list << OrnCategoryListItem::parse(category.toObject(), this);
+        list << OrnCategoryListItem::parse(category.toObject());
     }
     this->beginInsertRows(QModelIndex(), 0, list.size() - 1);
     mData = list;
