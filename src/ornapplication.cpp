@@ -174,6 +174,7 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     QString urlKey(QStringLiteral("url"));
     QString nameKey(QStringLiteral("name"));
 
+    mCommentsOpen = jsonObject[QStringLiteral("comments_open")].toBool();
     mCommentsCount = Orn::toUint(jsonObject[QStringLiteral("comments_count")]);
     mDownloadsCount = Orn::toUint(jsonObject[QStringLiteral("downloads")]);
     mTitle = Orn::toString(jsonObject[QStringLiteral("title")]);

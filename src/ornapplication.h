@@ -37,6 +37,7 @@ class OrnApplication : public OrnApiRequest
     Q_PROPERTY(quint32 appId READ appId WRITE setAppId NOTIFY appIdChanged)
     Q_PROPERTY(quint32 userId MEMBER mUserId NOTIFY ornRequestFinished)
     Q_PROPERTY(quint32 ratingCount MEMBER mRatingCount NOTIFY ornRequestFinished)
+    Q_PROPERTY(bool commentsOpen MEMBER mCommentsOpen NOTIFY ornRequestFinished)
     Q_PROPERTY(quint32 commentsCount MEMBER mCommentsCount NOTIFY ornRequestFinished)
     Q_PROPERTY(quint32 downloadsCount MEMBER mDownloadsCount NOTIFY ornRequestFinished)
     Q_PROPERTY(float rating MEMBER mRating NOTIFY ornRequestFinished)
@@ -107,6 +108,7 @@ private:
     OrnPm::RepoStatus mRepoStatus;
     OrnPm::PackageStatus mPackageStatus;
 
+    bool mCommentsOpen;
     quint32 mAppId;
     quint32 mUserId;
     quint32 mRatingCount;
