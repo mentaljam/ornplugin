@@ -13,7 +13,8 @@ public:
     {
         DataRole = Qt::DisplayRole,
         TitleRole = Qt::UserRole,
-        DateRole
+        DateRole,
+        PackageStatusRole
     };
     Q_ENUM(Roles)
 

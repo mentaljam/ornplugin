@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QDate>
 
-// TODO: add "installed" property
 class OrnAppListItem : public QObject
 {
     friend class OrnAbstractAppsModel;
@@ -23,6 +22,7 @@ class OrnAppListItem : public QObject
     Q_PROPERTY(QString iconSource MEMBER mIconSource CONSTANT)
     Q_PROPERTY(QString sinceUpdate MEMBER mSinceUpdate CONSTANT)
     Q_PROPERTY(QString category MEMBER mCategory CONSTANT)
+    Q_PROPERTY(QString package MEMBER mPackage CONSTANT)
 
 public:
     explicit OrnAppListItem(QObject *parent = nullptr);
@@ -44,6 +44,7 @@ private:
     QString mIconSource;
     QString mSinceUpdate;
     QString mCategory;
+    QString mPackage;
 };
 
 #endif // ORNAPPLISTITEM_H
