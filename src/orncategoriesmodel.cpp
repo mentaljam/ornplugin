@@ -8,20 +8,30 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
-OrnCategoriesModel::OrnCategoriesModel(QObject *parent) :
-    OrnAbstractListModel(false, parent)
-{
-
-}
+OrnCategoriesModel::OrnCategoriesModel(QObject *parent)
+    : OrnAbstractListModel(false, parent)
+{}
 
 QVariant OrnCategoriesModel::data(const QModelIndex &index, int role) const
 {
-    Q_UNUSED(role)
     if (!index.isValid())
     {
         return QVariant();
     }
-    return QVariant::fromValue(mData[index.row()]);
+
+    auto category = static_cast<OrnCategoryListItem *>(mData[index.row()]);
+    switch (role) {
+    case CategoryIdRole:
+        return category->categoryId;
+    case AppsCountRole:
+        return category->appsCount;
+    case DepthRole:
+        return category->depth;
+    case NameRole:
+        return category->name;
+    default:
+        return QVariant();
+    }
 }
 
 void OrnCategoriesModel::fetchMore(const QModelIndex &parent)
@@ -35,7 +45,12 @@ void OrnCategoriesModel::fetchMore(const QModelIndex &parent)
 
 QHash<int, QByteArray> OrnCategoriesModel::roleNames() const
 {
-    return { { Qt::DisplayRole, "categoryData" } };
+    return {
+        { CategoryIdRole, "categoryId" },
+        { AppsCountRole,  "appsCount" },
+        { DepthRole,      "depth" },
+        { NameRole,       "name" }
+    };
 }
 
 void OrnCategoriesModel::onJsonReady(const QJsonDocument &jsonDoc)
@@ -47,7 +62,7 @@ void OrnCategoriesModel::onJsonReady(const QJsonDocument &jsonDoc)
         return;
     }
 
-    QObjectList list;
+    OrnItemList list;
     for (const auto &category: categoriesArray)
     {
         list << OrnCategoryListItem::parse(category.toObject());
@@ -59,4 +74,3 @@ void OrnCategoriesModel::onJsonReady(const QJsonDocument &jsonDoc)
     emit this->replyProcessed();
     mCanFetchMore = false;
 }
-

@@ -78,10 +78,10 @@ const QMap<quint32, const char*> OrnCategoryListItem::categories{
 };
 
 OrnCategoryListItem::OrnCategoryListItem(const QJsonObject &jsonObject)
-    : mTid(Orn::toUint(jsonObject[QStringLiteral("tid")]))
-    , mAppsCount(Orn::toUint(jsonObject[QStringLiteral("apps_count")]))
-    , mDepth(jsonObject[QStringLiteral("depth")].toVariant().toUInt())
-    , mName(categoryName(mTid))
+    : categoryId(Orn::toUint(jsonObject[QStringLiteral("tid")]))
+    , appsCount(Orn::toUint(jsonObject[QStringLiteral("apps_count")]))
+    , depth(jsonObject[QStringLiteral("depth")].toVariant().toUInt())
+    , name(categoryName(categoryId))
 {}
 
 QString OrnCategoryListItem::categoryName(const quint32 &tid)
@@ -99,9 +99,9 @@ QString OrnCategoryListItem::categoryName(const quint32 &tid)
     }
 }
 
-QObjectList OrnCategoryListItem::parse(const QJsonObject &jsonObject)
+OrnItemList OrnCategoryListItem::parse(const QJsonObject &jsonObject)
 {
-    QObjectList list;
+    OrnItemList list;
     QString childrenKey(QStringLiteral("childrens"));
     if (jsonObject.contains(childrenKey))
     {
@@ -110,10 +110,11 @@ QObjectList OrnCategoryListItem::parse(const QJsonObject &jsonObject)
         {
             list << OrnCategoryListItem::parse(child.toObject());
         }
-        std::sort(list.begin(), list.end(), [](QObject *a, QObject *b)
+        std::sort(list.begin(), list.end(),
+                  [](OrnAbstractListItem *a, OrnAbstractListItem *b)
         {
-            return static_cast<OrnCategoryListItem *>(a)->mName <
-                    static_cast<OrnCategoryListItem *>(b)->mName;
+            return static_cast<OrnCategoryListItem *>(a)->name <
+                   static_cast<OrnCategoryListItem *>(b)->name;
         });
 
     }

@@ -9,14 +9,21 @@ class OrnAbstractAppsModel : public OrnAbstractListModel
 
 public:
 
-    enum Roles
+    enum Role
     {
-        DataRole = Qt::DisplayRole,
-        TitleRole = Qt::UserRole,
-        DateRole,
-        PackageStatusRole
+        SortRole = Qt::UserRole,
+        PackageStatusRole,
+        AppIdRole,
+        CreateDateRole,
+        RatingCountRole,
+        RatingRole,
+        TitleRole,
+        UserNameRole,
+        IconSourceRole,
+        SinceUpdateRole,
+        CategoryRole
     };
-    Q_ENUM(Roles)
+    Q_ENUM(Role)
 
     OrnAbstractAppsModel(bool fetchable, QObject *parent = nullptr);
 

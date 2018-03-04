@@ -12,12 +12,24 @@ class OrnCommentsModel : public OrnAbstractListModel
     Q_PROPERTY(quint32 appId READ appId WRITE setAppId NOTIFY appIdChanged)
 
 public:
+    enum Role
+    {
+        CommentIdRole = Qt::UserRole,
+        ParentIdRole,
+        CreatedRole,
+        UserIdRole,
+        UserNameRole,
+        ParentUserNameRole,
+        UserIconSourceRole,
+        TextRole
+    };
+    Q_ENUM(Role)
+
     explicit OrnCommentsModel(QObject *parent = nullptr);
 
     quint32 appId() const;
     void setAppId(const quint32 &appId);
 
-    Q_INVOKABLE OrnCommentListItem *findItem(const quint32 &cid) const;
     Q_INVOKABLE int findItemRow(const quint32 &cid) const;
 
 public slots:
@@ -33,7 +45,6 @@ private:
 
 private:
     quint32 mAppId;
-    QMap<quint32, OrnCommentListItem *> mCommentsMap;
 
     // QAbstractItemModel interface
 public:

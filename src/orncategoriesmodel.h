@@ -11,6 +11,15 @@ class OrnCategoriesModel : public OrnAbstractListModel
 {
     Q_OBJECT
 public:
+    enum Role
+    {
+        CategoryIdRole = Qt::UserRole,
+        AppsCountRole,
+        DepthRole,
+        NameRole,
+    };
+    Q_ENUM(Role)
+
     explicit OrnCategoriesModel(QObject *parent = nullptr);
 
     // QAbstractItemModel interface

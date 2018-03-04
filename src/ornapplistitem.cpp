@@ -9,32 +9,27 @@
 
 
 OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject)
-    : mAppId(jsonObject[QStringLiteral("appid")].toVariant().toUInt())
-    , mCreated(Orn::toUint(jsonObject[QStringLiteral("created")]))
-    , mUpdated(Orn::toUint(jsonObject[QStringLiteral("updated")]))
-    , mTitle(Orn::toString(jsonObject[QStringLiteral("title")]))
-    , mIconSource(Orn::toString(jsonObject[QStringLiteral("icon")].toObject()[QStringLiteral("url")]))
-    , mSinceUpdate(sinceLabel(mCreated))
+    : appId(jsonObject[QStringLiteral("appid")].toVariant().toUInt())
+    , created(Orn::toUint(jsonObject[QStringLiteral("created")]))
+    , updated(Orn::toUint(jsonObject[QStringLiteral("updated")]))
+    , title(Orn::toString(jsonObject[QStringLiteral("title")]))
+    , iconSource(Orn::toString(jsonObject[QStringLiteral("icon")].toObject()[QStringLiteral("url")]))
+    , sinceUpdate(sinceLabel(created))
 {
     QString nameKey(QStringLiteral("name"));
 
     QString ratingKey(QStringLiteral("rating"));
     auto ratingObject = jsonObject[ratingKey].toObject();
-    mRatingCount = Orn::toUint(ratingObject[QStringLiteral("count")]);
-    mRating = ratingObject[ratingKey].toString().toFloat();
+    ratingCount = Orn::toUint(ratingObject[QStringLiteral("count")]);
+    rating = ratingObject[ratingKey].toString().toFloat();
 
-    mUserName = Orn::toString(jsonObject[QStringLiteral("user")].toObject()[nameKey]);
+    userName = Orn::toString(jsonObject[QStringLiteral("user")].toObject()[nameKey]);
 
     auto categories = jsonObject[QStringLiteral("category")].toArray();
     auto tid = Orn::toUint(categories.last().toObject()[QStringLiteral("tid")]);
-    mCategory = OrnCategoryListItem::categoryName(tid);
+    category = OrnCategoryListItem::categoryName(tid);
 
-    mPackage = Orn::toString(jsonObject[QStringLiteral("package")].toObject()[nameKey]);
-}
-
-QDate OrnAppListItem::createDate() const
-{
-    return QDateTime::fromMSecsSinceEpoch(quint64(mCreated) * 1000).date();
+    package = Orn::toString(jsonObject[QStringLiteral("package")].toObject()[nameKey]);
 }
 
 QString OrnAppListItem::sinceLabel(const quint32 &value)

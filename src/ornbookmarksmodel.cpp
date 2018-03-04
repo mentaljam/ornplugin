@@ -25,7 +25,7 @@ void OrnBookmarksModel::onBookmarkChanged(quint32 appId, bool bookmarked)
         for (int i = 0; i < s; ++i)
         {
             auto app = static_cast<OrnAppListItem *>(mData[i]);
-            if (app->mAppId == appId)
+            if (app->appId == appId)
             {
                 qDebug() << "Removing app" << appId << "from bookmarks model";
                 this->beginRemoveRows(QModelIndex(), i, i);

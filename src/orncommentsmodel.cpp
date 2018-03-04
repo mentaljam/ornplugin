@@ -6,19 +6,9 @@
 #include <QNetworkReply>
 #include <QDebug>
 
-OrnCommentsModel::OrnCommentsModel(QObject *parent) :
-    OrnAbstractListModel(false, parent)
-{
-    connect(this, &OrnCommentsModel::rowsInserted, [=](const QModelIndex &parent, int first, int last)
-    {
-        Q_UNUSED(parent)
-        for (auto i = first; i < last; ++i)
-        {
-            auto comment = static_cast<OrnCommentListItem *>(mData[i]);
-            mCommentsMap.insert(comment->mCid, comment);
-        }
-    });
-}
+OrnCommentsModel::OrnCommentsModel(QObject *parent)
+    : OrnAbstractListModel(false, parent)
+{}
 
 quint32 OrnCommentsModel::appId() const
 {
@@ -35,17 +25,12 @@ void OrnCommentsModel::setAppId(const quint32 &appId)
     }
 }
 
-OrnCommentListItem *OrnCommentsModel::findItem(const quint32 &cid) const
-{
-    return mCommentsMap.contains(cid) ? mCommentsMap[cid] : 0;
-}
-
 int OrnCommentsModel::findItemRow(const quint32 &cid) const
 {
     QObjectList::size_type i = 0;
     for (const auto &c: mData)
     {
-        if (static_cast<OrnCommentListItem *>(c)->mCid == cid)
+        if (static_cast<OrnCommentListItem *>(c)->commentId == cid)
         {
             return i;
         }
@@ -85,9 +70,9 @@ void OrnCommentsModel::editComment(const quint32 &cid)
         for (int i = 0; i < size; ++i)
         {
             auto comment = static_cast<OrnCommentListItem *>(mData[i]);
-            if (comment->mCid == cid)
+            if (comment->commentId == cid)
             {
-                comment->mText = Orn::toString(jsonObject[QStringLiteral("text")]);
+                comment->text = Orn::toString(jsonObject[QStringLiteral("text")]);
                 auto index = this->createIndex(i, 0);
                 emit this->dataChanged(index, index);
                 return;
@@ -133,12 +118,36 @@ QJsonObject OrnCommentsModel::processReply(QNetworkReply *reply)
 
 QVariant OrnCommentsModel::data(const QModelIndex &index, int role) const
 {
-    Q_UNUSED(role)
     if (!index.isValid())
     {
         return QVariant();
     }
-    return QVariant::fromValue(mData[index.row()]);
+
+    auto comment = static_cast<OrnCommentListItem *>(mData[index.row()]);
+    switch (role)
+    {
+    case CommentIdRole:
+        return comment->commentId;
+    case ParentIdRole:
+        return comment->parentId;
+    case CreatedRole:
+        return comment->created;
+    case UserIdRole:
+        return comment->userId;
+    case UserNameRole:
+        return comment->userName;
+    case ParentUserNameRole:
+    {
+        auto row = this->findItemRow(comment->parentId);
+        return row == -1 ? QString() : static_cast<OrnCommentListItem *>(mData[row])->userName;
+    }
+    case UserIconSourceRole:
+        return comment->userIconSource;
+    case TextRole:
+        return comment->text;
+    default:
+        return QVariant();
+    }
 }
 
 void OrnCommentsModel::fetchMore(const QModelIndex &parent)
@@ -152,7 +161,16 @@ void OrnCommentsModel::fetchMore(const QModelIndex &parent)
 
 QHash<int, QByteArray> OrnCommentsModel::roleNames() const
 {
-    return { { Qt::DisplayRole, "commentData" } };
+    return {
+        { CommentIdRole,      "commentId" },
+        { ParentIdRole,       "parentId" },
+        { CreatedRole,        "created" },
+        { UserIdRole,         "userId" },
+        { UserNameRole,       "userName" },
+        { ParentUserNameRole, "parentUserName" },
+        { UserIconSourceRole, "userIconSource" },
+        { TextRole,           "text" }
+    };
 }
 
 //bool OrnCommentsModel::removeRows(int row, int count, const QModelIndex &parent)

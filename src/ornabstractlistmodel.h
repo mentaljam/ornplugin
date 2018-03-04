@@ -2,6 +2,8 @@
 #define ORNABSTRACTLISTMODEL_H
 
 
+#include "ornabstractlistitem.h"
+
 #include <QAbstractListModel>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -56,7 +58,7 @@ protected:
                 }
                 mPrevReplyHash = replyHash;
             }
-            QObjectList list;
+            OrnItemList list;
             for (const QJsonValueRef &jsonValue: jsonArray)
             {
                 // Each class of list item should implement a constructor
@@ -85,7 +87,7 @@ protected:
     bool    mFetchable;
     bool    mCanFetchMore;
     quint32 mPage;
-    QObjectList mData;
+    OrnItemList mData;
     OrnApiRequest *mApiRequest;
 
 private:
