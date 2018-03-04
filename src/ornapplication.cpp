@@ -195,7 +195,13 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     mRatingCount = Orn::toUint(ratingObject[QStringLiteral("count")]);
     mRating = ratingObject[ratingKey].toString().toFloat();
 
-//    mTagsIds = Orn::toIntList(jsonObject[QStringLiteral("tags")]);
+    mTagIds.clear();
+    QString tidKey(QStringLiteral("tid"));
+    for (const auto &id : jsonObject[QStringLiteral("tags")].toArray())
+    {
+        mTagIds << Orn::toString(id.toObject()[tidKey]);
+    }
+
     auto catIds = Orn::toIntList(jsonObject[QStringLiteral("category")]);
     mCategories.clear();
     for (const auto &id : catIds)

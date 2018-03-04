@@ -51,6 +51,7 @@ class OrnApplication : public OrnApiRequest
     Q_PROPERTY(QString category READ category NOTIFY ornRequestFinished)
     Q_PROPERTY(QDateTime created MEMBER mCreated NOTIFY ornRequestFinished)
     Q_PROPERTY(QDateTime ornRequestFinished MEMBER mUpdated NOTIFY ornRequestFinished)
+    Q_PROPERTY(QStringList tagIds MEMBER mTagIds NOTIFY ornRequestFinished)
     Q_PROPERTY(QVariantList categories MEMBER mCategories NOTIFY ornRequestFinished)
     Q_PROPERTY(QVariantList screenshots MEMBER mScreenshots NOTIFY ornRequestFinished)
 
@@ -133,8 +134,7 @@ private:
     QString mChangelog;
     QDateTime mCreated;
     QDateTime mUpdated;
-    /// A list of maps with keys [ id, name ]
-//    IdNameList mTags;
+    QStringList mTagIds;
     /// A list of maps with keys [ id, name ]
     QVariantList mCategories;
     /// A list of maps with keys [ url, thumb ]

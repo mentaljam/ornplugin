@@ -35,7 +35,10 @@ SOURCES += \
     src/ornbookmarksmodel.cpp \
     src/ornbackup.cpp \
     src/ornpm.cpp \
-    src/ornpackageversion.cpp
+    src/ornpackageversion.cpp \
+    src/orntagsmodel.cpp \
+    src/orntaglistitem.cpp \
+    src/orntagappsmodel.cpp
 
 HEADERS += \
     src/orn_plugin.h \
@@ -43,6 +46,7 @@ HEADERS += \
     src/ornapirequest.h \
     src/ornclient.h \
     src/ornabstractlistmodel.h \
+    src/ornabstractlistitem.h \
     src/ornabstractappsmodel.h \
     src/ornrecentappsmodel.h \
     src/ornuserappsmodel.h \
@@ -63,7 +67,10 @@ HEADERS += \
     src/ornpm_p.h \
     src/ornpackageversion.h \
     src/orninstalledpackage.h \
-    src/ornrepo.h
+    src/ornrepo.h \
+    src/orntagsmodel.h \
+    src/orntaglistitem.h \
+    src/orntagappsmodel.h
 
 OTHER_FILES += \
     qmldir \

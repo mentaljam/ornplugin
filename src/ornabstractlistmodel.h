@@ -69,7 +69,7 @@ protected:
             this->beginInsertRows(QModelIndex(), row, row + list.size() - 1);
             mData.append(list);
             ++mPage;
-            qDebug() << list.size() << "items have been added to the model";
+            qDebug() << list.size() << "item(s) have been added to the model";
             this->endInsertRows();
         }
         else

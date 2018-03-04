@@ -12,6 +12,8 @@
 #include "ornproxymodel.h"
 #include "orncommentsmodel.h"
 #include "orncategoriesmodel.h"
+#include "orntagsmodel.h"
+#include "orntagappsmodel.h"
 #include "ornbookmarksmodel.h"
 #include "ornbackup.h"
 
@@ -30,6 +32,8 @@ void OrnPlugin::registerTypes(const char *uri)
     qmlRegisterType<OrnProxyModel>        (uri, 1, 0, "OrnProxyModel");
     qmlRegisterType<OrnCommentsModel>     (uri, 1, 0, "OrnCommentsModel");
     qmlRegisterType<OrnCategoriesModel>   (uri, 1, 0, "OrnCategoriesModel");
+    qmlRegisterType<OrnTagsModel>         (uri, 1, 0, "OrnTagsModel");
+    qmlRegisterType<OrnTagAppsModel>      (uri, 1, 0, "OrnTagAppsModel");
     qmlRegisterType<OrnBookmarksModel>    (uri, 1, 0, "OrnBookmarksModel");
     qmlRegisterType<OrnBackup>            (uri, 1, 0, "OrnBackup");
 
