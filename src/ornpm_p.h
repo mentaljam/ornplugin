@@ -24,8 +24,6 @@
 #define PK_METHOD_RESOLVE           "Resolve"
 #define PK_METHOD_REFRESHCACHE      "RefreshCache"
 
-#define PK_PROP_LASTPACKAGE         "LastPackage"
-
 #define PK_FLAG_NONE  quint64(0)
 
 #define REPO_URL_TMPL  QStringLiteral("https://sailfish.openrepos.net/%0/personal/main")
@@ -48,18 +46,11 @@ struct OrnPmPrivate
     OrnPmPrivate(OrnPm *ornPm);
 
     void initialise();
-    QDBusInterface *transaction();
+    QDBusInterface *transaction(const QString &item = QString());
     void preparePackageVersions(const QString &packageName);
     void enableRepos(bool enable);
     void onRepoModified(const QString &repoAlias, const OrnPm::RepoAction &action);
     OrnInstalledPackageList prepareInstalledPackages(const QString &packageName);
-
-    static inline QString lastPackage(QObject *t)
-    {
-        Q_ASSERT(t);
-        return static_cast<QDBusInterface *>(t)->
-                property(PK_PROP_LASTPACKAGE).toString();
-    }
 
     // <alias, enabled>
     typedef QHash<QString, bool>    RepoHash;
@@ -75,6 +66,7 @@ struct OrnPmPrivate
     StringHash      updatablePackages;
     StringHash      newUpdatablePackages;
     QHash<QString, OrnPm::Operation> operations;
+    QHash<QObject *, QString> transactionHash;
     QStringList     reposToRefresh;
     QString         forceRefresh;
 #ifdef QT_DEBUG

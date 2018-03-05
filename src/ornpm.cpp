@@ -211,7 +211,7 @@ OrnPm::PackageStatus OrnPm::packageStatus(const QString &packageName) const
     return PackageNotInstalled;
 }
 
-QDBusInterface *OrnPmPrivate::transaction()
+QDBusInterface *OrnPmPrivate::transaction(const QString &item)
 {
     auto reply = pkInterface->call(QStringLiteral("CreateTransaction"));
     Q_ASSERT_X(reply.type() != QDBusMessage::ErrorMessage, Q_FUNC_INFO,
@@ -230,6 +230,10 @@ QDBusInterface *OrnPmPrivate::transaction()
     QObject::connect(t, SIGNAL(Finished(quint32, quint32)), t, SLOT(deleteLater()));
     QObject::connect(t, SIGNAL(ErrorCode(quint32,QString)), q_ptr, SIGNAL(error(quint32,QString)));
 #endif
+    if (!item.isEmpty())
+    {
+        transactionHash.insert(t, item);
+    }
     return t;
 }
 
@@ -405,7 +409,7 @@ void OrnPm::installPackage(const QString &packageId)
     CHECK_NETWORK();
     SET_OPERATION_ITEM(InstallingPackage, Orn::packageName(packageId));
 
-    auto t = d_ptr->transaction();
+    auto t = d_ptr->transaction(packageId);
     connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(onPackageInstalled(quint32,quint32)));
     QStringList ids(packageId);
     qDebug().nospace() << "Calling " << t << "->" PK_METHOD_INSTALLPACKAGES "(" << PK_FLAG_NONE << ", " << ids << ")";
@@ -416,7 +420,7 @@ void OrnPm::installPackage(const QString &packageId)
 void OrnPm::onPackageInstalled(quint32 exit, quint32 runtime)
 {
     Q_UNUSED(runtime)
-    auto id = OrnPmPrivate::lastPackage(this->sender());
+    auto id = d_ptr->transactionHash.take(this->sender());
     auto name = Orn::packageName(id);
     if (exit == Transaction::ExitSuccess)
     {
@@ -436,7 +440,7 @@ void OrnPm::removePackage(const QString &packageId, bool autoremove)
 {
     SET_OPERATION_ITEM(RemovingPackage, Orn::packageName(packageId));
 
-    auto t = d_ptr->transaction();
+    auto t = d_ptr->transaction(packageId);
     connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(onPackageRemoved(quint32,quint32)));
     QStringList ids(packageId);
     qDebug().nospace() << "Calling " << t << "->" PK_METHOD_REMOVEPACKAGES "("
@@ -448,7 +452,7 @@ void OrnPm::removePackage(const QString &packageId, bool autoremove)
 void OrnPm::onPackageRemoved(quint32 exit, quint32 runtime)
 {    
     Q_UNUSED(runtime)
-    auto id = OrnPmPrivate::lastPackage(this->sender());
+    auto id = d_ptr->transactionHash.take(this->sender());
     auto name = Orn::packageName(id);
     if (exit == Transaction::ExitSuccess)
     {
@@ -475,7 +479,7 @@ void OrnPm::updatePackage(const QString &packageName)
     SET_OPERATION_ITEM(UpdatingPackage, packageName);
 
     auto packageId = d_ptr->updatablePackages[packageName];
-    auto t = d_ptr->transaction();
+    auto t = d_ptr->transaction(packageId);
     connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(onPackageUpdated(quint32,quint32)));
     QStringList ids(packageId);
     qDebug().nospace() << "Calling " << t << "->" PK_METHOD_UPDATEPACKAGES "(" << PK_FLAG_NONE << ", " << ids << ")";
@@ -486,7 +490,7 @@ void OrnPm::updatePackage(const QString &packageName)
 void OrnPm::onPackageUpdated(quint32 exit, quint32 runtime)
 {
     Q_UNUSED(runtime)
-    auto id = OrnPmPrivate::lastPackage(this->sender());
+    auto id = d_ptr->transactionHash.take(this->sender());
     auto name = Orn::packageName(id);
     if (exit == Transaction::ExitSuccess)
     {
