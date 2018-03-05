@@ -182,6 +182,10 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     mPackageName = Orn::toString(jsonObject[QStringLiteral("package")].toObject()[nameKey]);
     mBody = Orn::toString(jsonObject[QStringLiteral("body")]);
     mChangelog = Orn::toString(jsonObject[QStringLiteral("changelog")]);
+    if (mChangelog == "<p>(none)</p>\n")
+    {
+        mChangelog.clear();
+    }
     mCreated = Orn::toDateTime(jsonObject[QStringLiteral("created")]);
     mUpdated = Orn::toDateTime(jsonObject[QStringLiteral("updated")]);
 
