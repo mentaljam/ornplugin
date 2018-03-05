@@ -422,6 +422,8 @@ void OrnPm::onPackageInstalled(quint32 exit, quint32 runtime)
     Q_UNUSED(runtime)
     auto id = d_ptr->transactionHash.take(this->sender());
     auto name = Orn::packageName(id);
+    d_ptr->operations.remove(name);
+    emit this->operationsChanged();
     if (exit == Transaction::ExitSuccess)
     {
         d_ptr->installedPackages[name] = Orn::packageVersion(id);
@@ -432,8 +434,6 @@ void OrnPm::onPackageInstalled(quint32 exit, quint32 runtime)
     {
         emit this->packageStatusChanged(name, OrnPm::PackageUnknownStatus);
     }
-    d_ptr->operations.remove(name);
-    emit this->operationsChanged();
 }
 
 void OrnPm::removePackage(const QString &packageId, bool autoremove)
@@ -454,6 +454,8 @@ void OrnPm::onPackageRemoved(quint32 exit, quint32 runtime)
     Q_UNUSED(runtime)
     auto id = d_ptr->transactionHash.take(this->sender());
     auto name = Orn::packageName(id);
+    d_ptr->operations.remove(name);
+    emit this->operationsChanged();
     if (exit == Transaction::ExitSuccess)
     {
         d_ptr->installedPackages.remove(name);
@@ -464,8 +466,6 @@ void OrnPm::onPackageRemoved(quint32 exit, quint32 runtime)
     {
         emit this->packageStatusChanged(name, OrnPm::PackageUnknownStatus);
     }
-    d_ptr->operations.remove(name);
-    emit this->operationsChanged();
 }
 
 void OrnPm::updatePackage(const QString &packageName)
@@ -492,6 +492,8 @@ void OrnPm::onPackageUpdated(quint32 exit, quint32 runtime)
     Q_UNUSED(runtime)
     auto id = d_ptr->transactionHash.take(this->sender());
     auto name = Orn::packageName(id);
+    d_ptr->operations.remove(name);
+    emit this->operationsChanged();
     if (exit == Transaction::ExitSuccess)
     {
         d_ptr->updatablePackages.remove(name);
@@ -504,8 +506,6 @@ void OrnPm::onPackageUpdated(quint32 exit, quint32 runtime)
     {
         emit this->packageStatusChanged(name, OrnPm::PackageUnknownStatus);
     }
-    d_ptr->operations.remove(name);
-    emit this->operationsChanged();
 }
 
 void OrnPm::addRepo(const QString &author)
