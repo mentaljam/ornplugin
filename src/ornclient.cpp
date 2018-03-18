@@ -230,6 +230,44 @@ void OrnClient::editComment(const quint32 &commentId, const QString &body)
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnClient::onCommentEdited);
 }
 
+void OrnClient::vote(const quint32 &appId, const quint32 &value)
+{
+    if (value < 1 || value > 100)
+    {
+        qCritical() << "Vote must be in range [0, 100], provided value is" << value;
+        return;
+    }
+
+    auto request = this->authorisedRequest();
+    request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("votes")));
+
+    QJsonObject voteObject = {
+        {QStringLiteral("appid"), QString::number(appId)},
+        {QStringLiteral("value"), QString::number(value)}
+    };
+
+    qDebug() << "Posting user vote" << value << "for app" << appId;
+    auto reply = Orn::networkAccessManager()->post(request, QJsonDocument(voteObject).toJson());
+    connect(reply, &QNetworkReply::finished, [this, reply, appId, value]()
+    {
+        if (reply->error() == QNetworkReply::NoError)
+        {
+            auto replyObject = QJsonDocument::fromJson(reply->readAll()).object();
+            QString ratingKey(QStringLiteral("rating"));
+            auto ratingObject = replyObject[ratingKey].toObject();
+            qDebug() << "Received vote reply for app" << appId << ratingObject;
+            emit this->userVoteFinished(appId, value,
+                                        Orn::toUint(ratingObject[QStringLiteral("count")]),
+                                        ratingObject[ratingKey].toString().toFloat());
+        }
+        else
+        {
+            qWarning() << "Posting user vote" << value << "for app" << appId << "failed!";
+        }
+        reply->deleteLater();
+    });
+}
+
 void OrnClient::setCookieTimer()
 {
     disconnect(mCookieTimer, &QTimer::timeout, 0, 0);

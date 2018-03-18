@@ -46,8 +46,11 @@ public:
 public slots:
     void login(const QString &username, const QString &password);
     void logout();
+
     void comment(const quint32 &appId, const QString &body, const quint32 &parentId = 0);
     void editComment(const quint32 &commentId, const QString &body);
+
+    void vote(const quint32 &appId, const quint32 &value);
 
 signals:
     void authorisedChanged();
@@ -57,6 +60,8 @@ signals:
     void commentAdded(quint32 cid);
     void commentEdited(quint32 cid);
     void bookmarkChanged(quint32 appid, bool bookmarked);
+    void userVoteFinished(const quint32 &appId, const quint32 &userVote,
+                          const quint32 &count, const float &rating);
 
 private slots:
     void setCookieTimer();
