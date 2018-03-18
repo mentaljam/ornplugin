@@ -3,7 +3,7 @@
 
 #include <QObject>
 
-#include <PackageKit/packagekit-qt5/Transaction>
+#include <Transaction>
 
 class QQmlEngine;
 class QJSEngine;

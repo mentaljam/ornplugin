@@ -9,6 +9,8 @@ TARGET = $$qtLibraryTarget($$TARGET)
 
 QMAKE_MOC_OPTIONS += -Muri=harbour.orn
 
+include(include_packagekit.pri)
+
 DEFINES += \
     ORN_LIB_VERSION=\\\"$$VERSION\\\"
 
