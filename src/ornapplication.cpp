@@ -1,6 +1,7 @@
 #include "ornapplication.h"
 #include "orn.h"
 #include "orncategorylistitem.h"
+#include "ornclient.h"
 
 #include <QUrl>
 #include <QNetworkRequest>
@@ -54,6 +55,19 @@ OrnApplication::OrnApplication(QObject *parent)
     });
 
     connect(ornPm, &OrnPm::packageVersions, this, &OrnApplication::onPackageVersions);
+
+    connect(OrnClient::instance(), &OrnClient::userVoteFinished,
+            [this](const quint32 &appId, const quint32 &userVote,
+                   const quint32 &count, const float &rating)
+    {
+        if (mAppId == appId)
+        {
+            mUserVote = userVote;
+            mRatingCount = count;
+            mRating = rating;
+            emit this->ratingChanged();
+        }
+    });
 }
 
 quint32 OrnApplication::appId() const
@@ -197,6 +211,7 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     QString ratingKey(QStringLiteral("rating"));
     auto ratingObject = jsonObject[ratingKey].toObject();
     mRatingCount = Orn::toUint(ratingObject[QStringLiteral("count")]);
+    mUserVote = Orn::toUint(ratingObject[QStringLiteral("user_vote")]);
     mRating = ratingObject[ratingKey].toString().toFloat();
 
     mTagIds.clear();
@@ -253,6 +268,7 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     }
 
     emit this->ornRequestFinished();
+    emit this->ratingChanged();
 }
 
 void OrnApplication::onRepoListChanged()

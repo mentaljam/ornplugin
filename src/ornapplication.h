@@ -36,11 +36,12 @@ class OrnApplication : public OrnApiRequest
 
     Q_PROPERTY(quint32 appId READ appId WRITE setAppId NOTIFY appIdChanged)
     Q_PROPERTY(quint32 userId MEMBER mUserId NOTIFY ornRequestFinished)
-    Q_PROPERTY(quint32 ratingCount MEMBER mRatingCount NOTIFY ornRequestFinished)
+    Q_PROPERTY(quint32 ratingCount MEMBER mRatingCount NOTIFY ratingChanged)
+    Q_PROPERTY(quint32 userVote MEMBER mUserVote NOTIFY ratingChanged)
     Q_PROPERTY(bool commentsOpen MEMBER mCommentsOpen NOTIFY ornRequestFinished)
     Q_PROPERTY(quint32 commentsCount MEMBER mCommentsCount NOTIFY ornRequestFinished)
     Q_PROPERTY(quint32 downloadsCount MEMBER mDownloadsCount NOTIFY ornRequestFinished)
-    Q_PROPERTY(float rating MEMBER mRating NOTIFY ornRequestFinished)
+    Q_PROPERTY(float rating MEMBER mRating NOTIFY ratingChanged)
     Q_PROPERTY(QString title MEMBER mTitle NOTIFY ornRequestFinished)
     Q_PROPERTY(QString userName MEMBER mUserName NOTIFY ornRequestFinished)
     Q_PROPERTY(QString userIconSource MEMBER mUserIconSource NOTIFY ornRequestFinished)
@@ -92,6 +93,7 @@ signals:
     void availableVersionIsNewerChanged();
     void globalVersionChanged();
     void globalVersionIsNewerChanged();
+    void ratingChanged();
 
 public slots:
     void ornRequest();
@@ -113,6 +115,7 @@ private:
     quint32 mAppId;
     quint32 mUserId;
     quint32 mRatingCount;
+    quint32 mUserVote;
     quint32 mCommentsCount;
     quint32 mDownloadsCount;
 
