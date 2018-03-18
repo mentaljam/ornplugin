@@ -1,5 +1,6 @@
 #include "ornapirequest.h"
 #include "orn.h"
+#include "ornclient.h"
 
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -39,6 +40,11 @@ void OrnApiRequest::run(const QNetworkRequest &request)
 QNetworkRequest OrnApiRequest::networkRequest(const QUrl &url)
 {
     QNetworkRequest request;
+    auto client = OrnClient::instance();
+    if (client->authorised())
+    {
+        request = client->authorisedRequest();
+    }
     request.setRawHeader(langName, langValue);
     request.setRawHeader(platformName, platformValue);
     request.setUrl(url);

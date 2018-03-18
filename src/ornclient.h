@@ -14,6 +14,7 @@ class QJSEngine;
 class OrnClient : public OrnApiRequest
 {
     friend class OrnBackup;
+    friend class OrnApiRequest;
 
     Q_OBJECT
     Q_PROPERTY(bool authorised READ authorised NOTIFY authorisedChanged)

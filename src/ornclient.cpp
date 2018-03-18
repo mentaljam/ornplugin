@@ -202,6 +202,7 @@ void OrnClient::logout()
 void OrnClient::comment(const quint32 &appId, const QString &body, const quint32 &parentId)
 {
     auto request = this->authorisedRequest();
+    request.setHeader(QNetworkRequest::ContentTypeHeader, APPLICATION_JSON);
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("comments")));
 
     QJsonObject commentObject;
@@ -220,6 +221,7 @@ void OrnClient::comment(const quint32 &appId, const QString &body, const quint32
 void OrnClient::editComment(const quint32 &commentId, const QString &body)
 {
     auto request = this->authorisedRequest();
+    request.setHeader(QNetworkRequest::ContentTypeHeader, APPLICATION_JSON);
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("comments/%0").arg(commentId)));
 
     QJsonObject commentObject;
@@ -239,6 +241,7 @@ void OrnClient::vote(const quint32 &appId, const quint32 &value)
     }
 
     auto request = this->authorisedRequest();
+    request.setHeader(QNetworkRequest::ContentTypeHeader, APPLICATION_JSON);
     request.setUrl(OrnApiRequest::apiUrl(QStringLiteral("votes")));
 
     QJsonObject voteObject = {
@@ -369,7 +372,6 @@ QNetworkRequest OrnClient::authorisedRequest()
 {
     Q_ASSERT(this->authorised());
     QNetworkRequest request;
-    request.setHeader(QNetworkRequest::ContentTypeHeader, APPLICATION_JSON);
     request.setHeader(QNetworkRequest::CookieHeader, QVariant::fromValue(
                       QNetworkCookie::parseCookies(mSettings->value(USER_COOKIE).toByteArray()).first()));
     request.setRawHeader(QByteArrayLiteral("X-CSRF-Token"), mSettings->value(USER_TOKEN).toByteArray());
