@@ -57,7 +57,18 @@ OrnApplication::OrnApplication(QObject *parent)
 
     connect(ornPm, &OrnPm::packageVersions, this, &OrnApplication::onPackageVersions);
 
-    connect(OrnClient::instance(), &OrnClient::userVoteFinished,
+    auto client = OrnClient::instance();
+    connect(client, &OrnClient::commentAdded,
+            [this](const quint32 &appId, const quint32 &cid)
+    {
+        Q_UNUSED(cid)
+        if (mAppId == appId)
+        {
+            ++mCommentsCount;
+            emit this->commentsCountChanged();
+        }
+    });
+    connect(client, &OrnClient::userVoteFinished,
             [this](const quint32 &appId, const quint32 &userVote,
                    const quint32 &count, const float &rating)
     {
@@ -271,6 +282,7 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     mIsLoaded = true;
 
     emit this->ornRequestFinished();
+    emit this->commentsCountChanged();
     emit this->ratingChanged();
 }
 

@@ -58,7 +58,7 @@ signals:
     void authorisationError();
     void dayToExpiry();
     void cookieIsValidChanged();
-    void commentAdded(quint32 cid);
+    void commentAdded(const quint32 &appId, const quint32 &cid);
     void commentEdited(quint32 cid);
     void bookmarkChanged(quint32 appid, bool bookmarked);
     void userVoteFinished(const quint32 &appId, const quint32 &userVote,
@@ -67,7 +67,6 @@ signals:
 private slots:
     void setCookieTimer();
     void onLoggedIn();
-    void onNewComment();
     void onCommentEdited();
 
 private:
