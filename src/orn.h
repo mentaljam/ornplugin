@@ -21,7 +21,7 @@ inline QString toString(const QJsonValue &value)
 
 inline QDateTime toDateTime(const QJsonValue &value)
 {
-    return QDateTime::fromMSecsSinceEpoch(quint64(toUint(value)) * 1000);
+    return QDateTime::fromMSecsSinceEpoch(qint64(toUint(value)) * 1000);
 }
 
 QList<quint32> toIntList(const QJsonValue &value);
