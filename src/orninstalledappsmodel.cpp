@@ -164,7 +164,7 @@ QVariant OrnInstalledAppsModel::data(const QModelIndex &index, int role) const
         return package.title.at(0).toUpper();
     case UpdateAvailableRole:
         // Return int to make it easier to parse
-        return (int)package.updateAvailable;
+        return int(package.updateAvailable);
     default:
         return QVariant();
     }

@@ -246,7 +246,7 @@ void OrnPm::onTransactionFinished(quint32 exit, quint32 runtime)
     this->sender()->deleteLater();
 }
 
-void OrnPm::emitError(quint32 code, QString details)
+void OrnPm::emitError(quint32 code, const QString& details)
 {
     qDebug() << this->sender() << "error code" << code << "-" << details;
     emit this->error(code, details);
@@ -263,7 +263,7 @@ void OrnPm::getUpdates()
     t->asyncCall(QStringLiteral(PK_METHOD_GETUPDATES), PK_FLAG_NONE);
 }
 
-void OrnPm::onPackageUpdate(quint32 info, QString packageId, QString summary)
+void OrnPm::onPackageUpdate(quint32 info, const QString& packageId, const QString &summary)
 {
     Q_UNUSED(summary)
     Q_ASSERT(info == Transaction::InfoEnhancement);
@@ -626,8 +626,6 @@ void OrnPmPrivate::onRepoModified(const QString &repoAlias, const OrnPm::RepoAct
         repos[repoAlias] = true;
         needRefresh = true;
         break;
-    default:
-        Q_UNREACHABLE();
     }
 
     if (needRefresh)

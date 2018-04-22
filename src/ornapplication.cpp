@@ -228,7 +228,7 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
 
     mTagIds.clear();
     QString tidKey(QStringLiteral("tid"));
-    for (const auto &id : jsonObject[QStringLiteral("tags")].toArray())
+    for (const QJsonValueRef id : jsonObject[QStringLiteral("tags")].toArray())
     {
         mTagIds << Orn::toString(id.toObject()[tidKey]);
     }
@@ -247,7 +247,7 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     QString largeKey(QStringLiteral("large"));
     auto jsonArray = jsonObject[QStringLiteral("screenshots")].toArray();
     mScreenshots.clear();
-    for (const QJsonValue &v: jsonArray)
+    for (const QJsonValueRef v: jsonArray)
     {
         auto o = v.toObject();
         mScreenshots << QVariantMap{

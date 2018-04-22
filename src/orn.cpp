@@ -17,7 +17,7 @@ QList<quint32> toIntList(const QJsonValue &value)
     auto array = value.toArray();
     QString tidKey(QStringLiteral("tid"));
     QList<quint32> list;
-    for (const QJsonValue &v: array)
+    for (const QJsonValueRef v : array)
     {
         list << toUint(v.toObject()[tidKey]);
     }

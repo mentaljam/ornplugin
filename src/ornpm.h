@@ -15,7 +15,7 @@ struct OrnPmPrivate;
 
 class OrnPm : public QObject
 {
-    friend class OrnPmPrivate;
+    friend struct OrnPmPrivate;
     friend class OrnBackup;
 
     Q_OBJECT
@@ -113,7 +113,7 @@ signals:
 private slots:
 #ifdef QT_DEBUG
     void onTransactionFinished(quint32 exit, quint32 runtime);
-    void emitError(quint32 code, QString details);
+    void emitError(quint32 code, const QString& details);
 #endif
 
     // Check for updates
@@ -121,7 +121,7 @@ signals:
     void updatablePackagesChanged();
 private slots:
     void getUpdates();
-    void onPackageUpdate(quint32 info, QString packageId, QString summary);
+    void onPackageUpdate(quint32 info, const QString& packageId, const QString &summary);
     void onGetUpdatesFinished(quint32 status, quint32 runtime);
 
     // Package versions

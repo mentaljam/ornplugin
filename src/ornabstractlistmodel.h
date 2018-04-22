@@ -59,7 +59,7 @@ protected:
                 mPrevReplyHash = replyHash;
             }
             OrnItemList list;
-            for (const QJsonValueRef &jsonValue: jsonArray)
+            for (const QJsonValueRef jsonValue: jsonArray)
             {
                 // Each class of list item should implement a constructor
                 // SomeListItem(const QJsonObject &)

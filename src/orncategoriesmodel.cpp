@@ -63,7 +63,7 @@ void OrnCategoriesModel::onJsonReady(const QJsonDocument &jsonDoc)
     }
 
     OrnItemList list;
-    for (const auto &category: categoriesArray)
+    for (const QJsonValueRef category: categoriesArray)
     {
         list << OrnCategoryListItem::parse(category.toObject());
     }

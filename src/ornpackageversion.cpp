@@ -29,12 +29,12 @@ OrnPackageVersion::OrnPackageVersion(const QString &version)
 {}
 
 OrnPackageVersion::OrnPackageVersion(const quint64 &dsize, const quint64 &isize,
-                                     const QString &version, const QString &arch, const QString &alias)
+                                     const QString &version, QString arch, QString alias)
     : downloadSize(dsize)
     , installSize(isize)
     , version(version)
-    , arch(arch)
-    , repoAlias(alias)
+    , arch(std::move(arch))
+    , repoAlias(std::move(alias))
     , versionParts(splitVersion(version))
 {}
 

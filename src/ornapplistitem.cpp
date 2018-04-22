@@ -35,7 +35,7 @@ OrnAppListItem::OrnAppListItem(const QJsonObject &jsonObject)
 QString OrnAppListItem::sinceLabel(const quint32 &value)
 {
     auto curDate = QDate::currentDate();
-    auto date = QDateTime::fromMSecsSinceEpoch(quint64(value) * 1000).date();
+    auto date = QDateTime::fromMSecsSinceEpoch(qint64(value) * 1000).date();
     auto days = date.daysTo(curDate);
     if (days == 0)
     {

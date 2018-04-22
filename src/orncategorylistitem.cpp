@@ -106,7 +106,7 @@ OrnItemList OrnCategoryListItem::parse(const QJsonObject &jsonObject)
     if (jsonObject.contains(childrenKey))
     {
         auto childrenArray = jsonObject[childrenKey].toArray();
-        for (const auto &child: childrenArray)
+        for (const QJsonValueRef child : childrenArray)
         {
             list << OrnCategoryListItem::parse(child.toObject());
         }
