@@ -135,6 +135,7 @@ signals:
     void packageInstalled(const QString &packageName);
 public slots:
     void installPackage(const QString &packageId);
+    void installFile(const QString &packageFile);
 private slots:
     void onPackageInstalled(quint32 exit, quint32 runtime);
 

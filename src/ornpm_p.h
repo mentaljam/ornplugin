@@ -18,6 +18,7 @@
 
 #define PK_METHOD_GETUPDATES        "GetUpdates"
 #define PK_METHOD_INSTALLPACKAGES   "InstallPackages"
+#define PK_METHOD_INSTALLFILES      "InstallFiles"
 #define PK_METHOD_REMOVEPACKAGES    "RemovePackages"
 #define PK_METHOD_UPDATEPACKAGES    "UpdatePackages"
 #define PK_METHOD_REPOSETDATA       "RepoSetData"

@@ -417,6 +417,17 @@ void OrnPm::installPackage(const QString &packageId)
     t->asyncCall(QStringLiteral(PK_METHOD_INSTALLPACKAGES), PK_FLAG_NONE, ids);
 }
 
+void OrnPm::installFile(const QString &packageFile)
+{
+    CHECK_NETWORK();
+
+    auto t = d_ptr->transaction();
+    connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(onPackageInstalled(quint32,quint32)));
+    QStringList files(packageFile);
+    qDebug().nospace() << "Calling " << t << "->" PK_METHOD_INSTALLFILES "(" << PK_FLAG_NONE << ", " << files << ")";
+    t->asyncCall(QStringLiteral(PK_METHOD_INSTALLFILES), PK_FLAG_NONE, files);
+}
+
 void OrnPm::onPackageInstalled(quint32 exit, quint32 runtime)
 {
     Q_UNUSED(runtime)
