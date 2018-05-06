@@ -707,7 +707,6 @@ void OrnPm::refreshRepo(const QString &repoAlias, bool force)
 void OrnPm::refreshRepos(bool force)
 {
     CHECK_NETWORK();
-    SET_OPERATION_ITEM(RefreshingAllRepos, QStringLiteral("refresh-repos"));
 
     for (auto it = d_ptr->repos.cbegin(); it != d_ptr->repos.cend(); ++it)
     {
@@ -725,6 +724,8 @@ void OrnPm::refreshRepos(bool force)
     }
 
     qDebug() << "Starting refresh cache for all ORN repositories";
+    SET_OPERATION_ITEM(RefreshingAllRepos, QStringLiteral("refresh-repos"));
+
     d_ptr->pkInterface->blockSignals(true);
     d_ptr->forceRefresh = force ? QStringLiteral("true") : QStringLiteral("false");
 #ifdef QT_DEBUG
