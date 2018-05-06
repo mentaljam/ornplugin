@@ -50,6 +50,7 @@ struct OrnPmPrivate
     QDBusInterface *transaction(const QString &item = QString());
     void preparePackageVersions(const QString &packageName);
     void enableRepos(bool enable);
+    void removeAllRepos();
     void onRepoModified(const QString &repoAlias, const OrnPm::RepoAction &action);
     OrnInstalledPackageList prepareInstalledPackages(const QString &packageName);
 

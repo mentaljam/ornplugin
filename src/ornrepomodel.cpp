@@ -12,6 +12,7 @@ OrnRepoModel::OrnRepoModel(QObject *parent)
 
     connect(ornPm, &OrnPm::initialisedChanged, this, &OrnRepoModel::reset);
     connect(ornPm, &OrnPm::enableReposFinished, this, &OrnRepoModel::reset);
+    connect(ornPm, &OrnPm::removeAllReposFinished, this, &OrnRepoModel::reset);
     connect(ornPm, &OrnPm::repoModified, this, &OrnRepoModel::onRepoModified);
     connect(this, &OrnRepoModel::modelReset, this, &OrnRepoModel::enabledReposChanged);
 

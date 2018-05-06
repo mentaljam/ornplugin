@@ -159,10 +159,12 @@ private slots:
 signals:
     void repoModified(const QString &repoAlias, const RepoAction &action);
     void enableReposFinished();
+    void removeAllReposFinished();
 public slots:
     void addRepo(const QString &author);
     void modifyRepo(const QString &repoAlias, const RepoAction &action);
     void enableRepos(bool enable);
+    void removeAllRepos();
 
     // Refresh repos
 public slots:

@@ -576,6 +576,11 @@ void OrnPm::enableRepos(bool enable)
     QtConcurrent::run(d_ptr, &OrnPmPrivate::enableRepos, enable);
 }
 
+void OrnPm::removeAllRepos()
+{
+    QtConcurrent::run(d_ptr, &OrnPmPrivate::removeAllRepos);
+}
+
 void OrnPmPrivate::enableRepos(bool enable)
 {
     CHECK_NETWORK();
@@ -615,6 +620,23 @@ void OrnPmPrivate::enableRepos(bool enable)
 
     qDebug() << "Finished" << (enable ? "enabling" : "disabling") << "all repositories";
     emit q_ptr->enableReposFinished();
+}
+
+void OrnPmPrivate::removeAllRepos()
+{
+    qDebug() <<"Removing all repositories";
+    QString method(QStringLiteral(SSU_METHOD_MODIFYREPO));
+
+    for (auto it = repos.begin(); it != repos.end(); ++it)
+    {
+        ssuInterface->call(method, OrnPm::RemoveRepo, it.key());
+    }
+    repos.clear();
+    updatablePackages.clear();
+    emit q_ptr->updatablePackagesChanged();
+
+    qDebug() << "Finished removing all repositories";
+    emit q_ptr->removeAllReposFinished();
 }
 
 void OrnPmPrivate::onRepoModified(const QString &repoAlias, const OrnPm::RepoAction &action)
