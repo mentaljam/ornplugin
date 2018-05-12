@@ -105,6 +105,7 @@ private slots:
     void onJsonReady(const QJsonDocument &jsonDoc);
     void onRepoListChanged();
     void onPackageStatusChanged(const QString &packageName, const OrnPm::PackageStatus &status);
+    void onUpdatablePackagesChanged();
     void onPackageVersions(const QString &packageName, const OrnPackageVersionList &versions);
 
 private:

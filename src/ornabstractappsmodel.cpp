@@ -7,22 +7,24 @@ OrnAbstractAppsModel::OrnAbstractAppsModel(bool fetchable, QObject *parent)
     : OrnAbstractListModel(fetchable, parent)
 {
     connect(OrnPm::instance(), &OrnPm::packageStatusChanged,
-            [this](const QString &packageName, const OrnPm::PackageStatus &status)
-    {
-        Q_UNUSED(status)
+            this, &OrnAbstractAppsModel::onPackageStatusChanged);
+}
 
-        auto size = mData.size();
-        for (int i = 0; i < size; ++i)
+void OrnAbstractAppsModel::onPackageStatusChanged(const QString &packageName, const int &status)
+{
+    Q_UNUSED(status)
+
+    auto size = mData.size();
+    for (int i = 0; i < size; ++i)
+    {
+        auto app = static_cast<OrnAppListItem *>(mData[i]);
+        if (app->package == packageName)
         {
-            auto app = static_cast<OrnAppListItem *>(mData[i]);
-            if (app->package == packageName)
-            {
-                auto ind = this->createIndex(i, 0);
-                emit this->dataChanged(ind, ind, {PackageStatusRole});
-                return;
-            }
+            auto ind = this->createIndex(i, 0);
+            emit this->dataChanged(ind, ind, {PackageStatusRole});
+            return;
         }
-    });
+    }
 }
 
 QVariant OrnAbstractAppsModel::data(const QModelIndex &index, int role) const

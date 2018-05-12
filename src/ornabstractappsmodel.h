@@ -27,6 +27,9 @@ public:
 
     OrnAbstractAppsModel(bool fetchable, QObject *parent = nullptr);
 
+private slots:
+    void onPackageStatusChanged(const QString &packageName, const int &status);
+
     // QAbstractItemModel interface
 public:
     QVariant data(const QModelIndex &index, int role) const;

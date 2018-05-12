@@ -47,13 +47,7 @@ OrnApplication::OrnApplication(QObject *parent)
     auto ornPm = OrnPm::instance();
     connect(ornPm, &OrnPm::repoModified, this, &OrnApplication::onRepoListChanged);
     connect(ornPm, &OrnPm::packageStatusChanged, this, &OrnApplication::onPackageStatusChanged);
-    connect(ornPm, &OrnPm::updatablePackagesChanged, [this, ornPm]()
-    {
-        if (mPackageName.size())
-        {
-            ornPm->getPackageVersions(mPackageName);
-        }
-    });
+    connect(ornPm, &OrnPm::updatablePackagesChanged, this, &OrnApplication::onUpdatablePackagesChanged);
 
     connect(ornPm, &OrnPm::packageVersions, this, &OrnApplication::onPackageVersions);
 
@@ -333,6 +327,14 @@ void OrnApplication::onPackageStatusChanged(const QString &packageName,
         emit this->packageStatusChanged();
         OrnPm::instance()->getPackageVersions(mPackageName);
         this->updateDesktopFile();
+    }
+}
+
+void OrnApplication::onUpdatablePackagesChanged()
+{
+    if (mPackageName.size())
+    {
+        OrnPm::instance()->getPackageVersions(mPackageName);
     }
 }
 
