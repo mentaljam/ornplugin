@@ -1,5 +1,6 @@
 #include "orninstalledappsmodel.h"
 #include "ornpm.h"
+#include "orn.h"
 
 #include <QDebug>
 
@@ -109,7 +110,7 @@ void OrnInstalledAppsModel::onPackageRemoved(const QString &packageName)
             qDebug() << "Removing model item" << packageName;
             this->beginRemoveRows(QModelIndex(), i, i);
             mData.removeAt(i);
-            this->endInsertRows();
+            this->endRemoveRows();
             return;
         }
     }
@@ -154,7 +155,7 @@ QVariant OrnInstalledAppsModel::data(const QModelIndex &index, int role) const
     case TitleRole:
         return package.title;
     case VersionRole:
-        return package.version;
+        return Orn::packageVersion(package.id);
     case IconRole:
         return package.icon;
     case SortRole:
@@ -165,6 +166,8 @@ QVariant OrnInstalledAppsModel::data(const QModelIndex &index, int role) const
     case UpdateAvailableRole:
         // Return int to make it easier to parse
         return int(package.updateAvailable);
+    case IdRole:
+        return package.id;
     default:
         return QVariant();
     }
@@ -178,6 +181,7 @@ QHash<int, QByteArray> OrnInstalledAppsModel::roleNames() const
         { VersionRole, "packageVersion" },
         { IconRole,    "packageIcon"    },
         { SectionRole, "section"        },
-        { UpdateAvailableRole, "updateAvailable" }
+        { UpdateAvailableRole, "updateAvailable" },
+        { IdRole,      "packageId"}
     };
 }

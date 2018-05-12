@@ -19,7 +19,8 @@ public:
         IconRole,
         SortRole,
         SectionRole,
-        UpdateAvailableRole
+        UpdateAvailableRole,
+        IdRole
     };
     Q_ENUM(Roles)
 

@@ -7,9 +7,9 @@
 struct OrnInstalledPackage
 {
     bool updateAvailable;
+    QString id;
     QString name;
     QString title;
-    QString version;
     QString icon;
 };
 

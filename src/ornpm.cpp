@@ -121,7 +121,9 @@ void OrnPmPrivate::initialise()
         QString name(solvable_lookup_str(s, SOLVABLE_NAME));
         if (name.size() > 0)
         {
-            installedPackages.insert(name, solvable_lookup_str(s, SOLVABLE_EVR));
+            auto id = QStringLiteral("%1;%2;%3;installed").arg(
+                        name, solvable_lookup_str(s, SOLVABLE_EVR), solvable_lookup_str(s, SOLVABLE_ARCH));
+            installedPackages.insert(name, id);
         }
     }
 
@@ -437,7 +439,7 @@ void OrnPm::onPackageInstalled(quint32 exit, quint32 runtime)
     emit this->operationsChanged();
     if (exit == Transaction::ExitSuccess)
     {
-        d_ptr->installedPackages[name] = Orn::packageVersion(id);
+        d_ptr->installedPackages[name] = id;
         emit this->packageInstalled(name);
         emit this->packageStatusChanged(name, OrnPm::PackageInstalled);
     }
@@ -508,7 +510,7 @@ void OrnPm::onPackageUpdated(quint32 exit, quint32 runtime)
     if (exit == Transaction::ExitSuccess)
     {
         d_ptr->updatablePackages.remove(name);
-        d_ptr->installedPackages[name] = Orn::packageVersion(id);
+        d_ptr->installedPackages[name] = id;
         emit this->packageUpdated(name);
         emit this->packageStatusChanged(name, OrnPm::PackageInstalled);
         emit this->updatablePackagesChanged();
@@ -933,11 +935,12 @@ OrnInstalledPackageList OrnPmPrivate::prepareInstalledPackages(const QString &pa
                 }
             }
         }
+        auto id = it.value();
         packages << OrnInstalledPackage {
             updatablePackages.contains(name),
-            name,
+            id,
+            Orn::packageName(id),
             title,
-            it.value(),
             icon
         };
     }
