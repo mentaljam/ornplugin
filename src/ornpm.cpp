@@ -16,7 +16,7 @@ using namespace PackageKit;
     Q_ASSERT_X(d_ptr->initialised, Q_FUNC_INFO, "Call only after OrnPm was initialised!")
 
 #define CHECK_NETWORK() \
-    if (NetworkManager::instance()->state() != QLatin1String("online")) { \
+    if (NetworkManagerFactory::createInstance()->state() != QLatin1String("online")) { \
         qWarning("Network is unavailable!"); \
         return; \
     }
@@ -746,7 +746,7 @@ void OrnPm::refreshNextRepo(quint32 exit, quint32 runtime)
     Q_UNUSED(runtime)
 #endif
 
-    bool offline = NetworkManager::instance()->state() != QLatin1String("online");
+    bool offline = NetworkManagerFactory::createInstance()->state() != QLatin1String("online");
     if (offline)
     {
         d_ptr->reposToRefresh.clear();
