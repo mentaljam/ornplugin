@@ -35,7 +35,6 @@ public:
         EnablingRepo,
         DisablingRepo,
         RefreshingRepo,
-        RefreshingAllRepos,
         InstallingPackage,
         RemovingPackage,
         UpdatingPackage

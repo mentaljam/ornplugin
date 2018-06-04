@@ -726,7 +726,6 @@ void OrnPm::refreshRepos(bool force)
     }
 
     qDebug() << "Starting refresh cache for all ORN repositories";
-    SET_OPERATION_ITEM(RefreshingAllRepos, QStringLiteral("refresh-repos"));
 
     d_ptr->pkInterface->blockSignals(true);
     d_ptr->forceRefresh = force ? QStringLiteral("true") : QStringLiteral("false");
@@ -765,14 +764,19 @@ void OrnPm::refreshNextRepo(quint32 exit, quint32 runtime)
         }
 #endif
         d_ptr->pkInterface->blockSignals(false);
-        d_ptr->operations.remove(QStringLiteral("refresh-repos"));
-        emit this->operationsChanged();
     }
     else
     {
         auto t = d_ptr->transaction();
         connect(t, SIGNAL(Finished(quint32,quint32)), this, SLOT(refreshNextRepo(quint32,quint32)));
         auto alias = d_ptr->reposToRefresh.takeFirst();
+        connect(t, &QDBusInterface::destroyed, [this, alias]()
+        {
+            d_ptr->operations.remove(alias);
+            emit this->operationsChanged();
+        });
+        d_ptr->operations.insert(alias, RefreshingRepo);
+        emit this->operationsChanged();
         qDebug().nospace() << "Calling " << t << "->" PK_METHOD_REPOSETDATA "("
                            << alias << ", \"refresh-now\", " << d_ptr->forceRefresh << ")";
         t->asyncCall(QStringLiteral(PK_METHOD_REPOSETDATA), alias, QStringLiteral("refresh-now"),
