@@ -3,13 +3,12 @@
 #include "orncategorylistitem.h"
 #include "ornclient.h"
 
-#include <QUrl>
 #include <QNetworkRequest>
-#include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFileInfo>
+#include <QStandardPaths>
 
 #include <QDebug>
 
@@ -159,11 +158,6 @@ quint64 OrnApplication::globalVersionInstallSize() const
     return mGlobalVersion.installSize;
 }
 
-bool OrnApplication::canBeLaunched() const
-{
-    return !mDesktopFile.isEmpty();
-}
-
 QString OrnApplication::category() const
 {
     return mCategories.empty() ? QString() :
@@ -175,17 +169,6 @@ void OrnApplication::ornRequest()
     auto url = OrnApiRequest::apiUrl(QStringLiteral("apps/%0").arg(mAppId));
     auto request = OrnApiRequest::networkRequest(url);
     this->run(request);
-}
-
-void OrnApplication::launch()
-{
-    if (mDesktopFile.isEmpty())
-    {
-        qWarning() << this << ": no desktop file";
-        return;
-    }
-    qDebug() << this << ": launching" << mDesktopFile;
-    QDesktopServices::openUrl(QUrl::fromLocalFile(mDesktopFile));
 }
 
 void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
@@ -423,6 +406,6 @@ void OrnApplication::updateDesktopFile()
             qDebug() << this << ": no desktop file was found";
         }
         mDesktopFile = desktopFile;
-        emit this->canBeLaunchedChanged();
+        emit this->desktopFileChanged();
     }
 }

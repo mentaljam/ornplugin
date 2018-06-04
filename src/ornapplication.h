@@ -17,10 +17,10 @@ class OrnApplication : public OrnApiRequest
 
     Q_OBJECT
 
-    Q_PROPERTY(bool canBeLaunched READ canBeLaunched NOTIFY canBeLaunchedChanged)
     Q_PROPERTY(OrnPm::RepoStatus repoStatus MEMBER mRepoStatus NOTIFY repoStatusChanged)
     Q_PROPERTY(OrnPm::PackageStatus packageStatus MEMBER mPackageStatus NOTIFY packageStatusChanged)
     Q_PROPERTY(QString repoAlias MEMBER mRepoAlias NOTIFY ornRequestFinished)
+    Q_PROPERTY(QString desktopFile MEMBER mDesktopFile NOTIFY desktopFileChanged)
     Q_PROPERTY(QString installedVersion READ installedVersion NOTIFY installedVersionChanged)
     Q_PROPERTY(quint64 installedVersionSize READ installedVersionSize NOTIFY installedVersionChanged)
     Q_PROPERTY(QString installedId READ installedId NOTIFY installedVersionChanged)
@@ -79,14 +79,12 @@ public:
     quint64 globalVersionDownloadSize() const;
     quint64 globalVersionInstallSize() const;
 
-    bool canBeLaunched() const;
-
     QString category() const;
 
 signals:
     void appIdChanged();
     void ornRequestFinished();
-    void canBeLaunchedChanged();
+    void desktopFileChanged();
     void repoStatusChanged();
     void packageStatusChanged();
     void installedVersionChanged();
@@ -99,7 +97,6 @@ signals:
 
 public slots:
     void ornRequest();
-    void launch();
 
 private slots:
     void onJsonReady(const QJsonDocument &jsonDoc);
