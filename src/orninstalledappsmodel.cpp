@@ -64,7 +64,7 @@ void OrnInstalledAppsModel::onInstalledPackages(const OrnInstalledPackageList &p
         packageHash[package.name] = package;
     }
 
-    for (OrnInstalledPackageList::size_type i = count; i >= 0; --i)
+    for (OrnInstalledPackageList::size_type i = count - 1; i >= 0; --i)
     {
         // Update updated packages
         auto name = mData[i].name;
