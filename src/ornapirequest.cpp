@@ -33,8 +33,14 @@ void OrnApiRequest::run(const QNetworkRequest &request)
         return;
     }
     qDebug() << "Fetching data from" << request.url().toString();
+    emit this->runningChanged(true);
     mNetworkReply = Orn::networkAccessManager()->get(request);
     connect(mNetworkReply, &QNetworkReply::finished, this, &OrnApiRequest::onReplyFinished);
+}
+
+bool OrnApiRequest::running() const
+{
+    return mNetworkReply != nullptr;
 }
 
 QNetworkRequest OrnApiRequest::networkRequest(const QUrl &url)
@@ -57,6 +63,7 @@ void OrnApiRequest::reset()
     {
         mNetworkReply->deleteLater();
         mNetworkReply = nullptr;
+        emit this->runningChanged(false);
     }
 }
 

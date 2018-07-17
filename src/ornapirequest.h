@@ -10,12 +10,14 @@ class QNetworkRequest;
 class OrnApiRequest : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(bool running READ running NOTIFY runningChanged)
 
 public:
     explicit OrnApiRequest(QObject *parent = nullptr);
     ~OrnApiRequest();
 
     void run(const QNetworkRequest &request);
+    bool running() const;
 
     inline static QUrl apiUrl(const QString &resource) { return QUrl(apiUrlPrefix + resource); }
 
@@ -25,6 +27,7 @@ public slots:
     void reset();
 
 signals:
+    void runningChanged(bool);
     void jsonReady(const QJsonDocument &jsonDoc);
 
 protected slots:
