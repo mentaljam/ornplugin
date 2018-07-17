@@ -34,7 +34,6 @@ class OrnApplication : public OrnApiRequest
     Q_PROPERTY(quint64 globalVersionDownloadSize READ globalVersionDownloadSize NOTIFY globalVersionChanged)
     Q_PROPERTY(quint64 globalVersionInstallSize READ globalVersionInstallSize NOTIFY globalVersionChanged)
 
-    Q_PROPERTY(bool isLoaded MEMBER mIsLoaded NOTIFY ornRequestFinished)
     Q_PROPERTY(quint32 appId READ appId WRITE setAppId NOTIFY appIdChanged)
     Q_PROPERTY(quint32 userId MEMBER mUserId NOTIFY ornRequestFinished)
     Q_PROPERTY(quint32 ratingCount MEMBER mRatingCount NOTIFY ratingChanged)
@@ -111,7 +110,6 @@ private:
     OrnPm::RepoStatus mRepoStatus;
     OrnPm::PackageStatus mPackageStatus;
 
-    bool mIsLoaded;
     bool mCommentsOpen;
     quint32 mAppId;
     quint32 mUserId;

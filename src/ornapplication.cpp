@@ -34,7 +34,6 @@ OrnApplication::OrnApplication(QObject *parent)
     : OrnApiRequest(parent)
     , mRepoStatus(OrnPm::RepoUnknownStatus)
     , mPackageStatus(OrnPm::PackageUnknownStatus)
-    , mIsLoaded(false)
     , mAppId(0)
     , mUserId(0)
     , mRatingCount(0)
@@ -255,8 +254,6 @@ void OrnApplication::onJsonReady(const QJsonDocument &jsonDoc)
     {
         qWarning() << this << ": information updated but it doesn't have any package name!";
     }
-
-    mIsLoaded = true;
 
     emit this->ornRequestFinished();
     emit this->commentsCountChanged();
